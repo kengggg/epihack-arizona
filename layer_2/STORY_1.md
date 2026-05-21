@@ -55,6 +55,9 @@ FROM counts;
 
 ## JSON Output
 
+The JSON Output is a deterministic input for LLM to synthesise the final output message, to make sure it consistence across the stories.
+
+
 ```json
 {
   "story": "temporal_trend",
@@ -78,6 +81,58 @@ FROM counts;
   }
 }
 ```
+
+### Result header
+
+```json
+{
+  "story": "temporal_trend",
+  "symptom": "loss_of_smell_or_taste",
+  "window": {
+    "anchor_date": "2025-07-12",
+    "recent_days": 14,
+    "baseline_days": 30
+  },
+```
+
+### Result body
+```json
+  "recent_yes": 2,
+  "recent_total": 7,
+  "baseline_yes": 3,
+  "baseline_total": 15,
+  "recent_ratio": 0.2857,
+  "baseline_ratio": 0.2000,
+  "fold_change": 1.43,
+```
+
+### Deterministic quality data
+
+```json
+  "data_quality": {
+    "recent_total_below_floor": true,
+    "baseline_total_below_floor": true,
+    "floor": 30
+  }
+```
+
+The two `*_below_floor` booleans are sample-size confidence flags — they tell the LLM whether the underlying windows had enough reports for the ratio to be meaningful, so the LLM can babbling ("early signal", "not yet a confirmed trend") instead of stating a noisy ratio as fact.
+
+```python
+FLOOR = 30  # minimum total reports per window
+
+data_quality = {
+    "recent_total_below_floor":   row["recent_total"]   < FLOOR,  # 7  < 30  → True
+    "baseline_total_below_floor": row["baseline_total"] < FLOOR,  # 15 < 30  → True
+    "floor": FLOOR,
+}
+```
+
+We could just as easily compute this in SQL as recent_total < `30` AS recent_total_below_floor.
+
+The floor is a policy decision, not a data property
+We may want different floors per story (a trend story can tolerate less data than a "your demographic" story where the cell is already sliced narrow). It keeps the SQL focused on aggregation only.
+
 
 ## LLM Prompt
 ```
