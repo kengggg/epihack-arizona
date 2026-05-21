@@ -1,0 +1,2 @@
+python baseline_change_report.py --csv fakeData.csv --n 7 --out figures_baseline/
+python baseline_change_report.py --csv fakeData.csv --n 14 --postal 85087 --out figures_baseline/85087/Script 
