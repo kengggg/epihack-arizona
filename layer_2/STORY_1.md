@@ -13,7 +13,7 @@ Reports of `symptom` in `area` are `+/- percentage` change the `30`-day baseline
 
 ## SQL
 
-```
+```sql
 WITH params AS (
    SELECT
        DATE(:anchor_date)  AS anchor_date,
@@ -54,7 +54,8 @@ FROM counts;
 ```
 
 ## JSON Output
-```
+
+```json
 {
   "story": "temporal_trend",
   "symptom": "loss_of_smell_or_taste",
