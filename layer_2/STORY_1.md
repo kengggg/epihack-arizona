@@ -164,3 +164,10 @@ For the "temporal_trend" story:
   >=1.5 rising, <=0.67 falling, otherwise stable.
 - Do not extrapolate causes.
 ```
+### Example of LLM Output
+
+```
+Thanks for reporting loss of smell or taste. In the [APP NAME] community, this symptom showed up in about 29% of reports over the past 14 days, compared with 20% in the 30 days before that — a modest increase, but the recent window is still small, so this isn't yet a confirmed trend.
+What this means: more reporters in Arizona have flagged this symptom recently, but we'd need more reports to know whether it's a real shift or normal week-to-week variation. Watching this kind of pattern is exactly what community surveillance is designed for.
+Your continued reporting is what makes this signal sharper — please keep submitting updates if your symptoms change.
+```
