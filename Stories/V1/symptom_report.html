@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EpiHack — Symptom Surveillance Report</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #252836;
+    --accent: #6c63ff;
+    --accent2: #ff6584;
+    --green: #43e97b;
+    --yellow: #f9ca24;
+    --text: #e8eaf6;
+    --muted: #8b8fa8;
+    --border: #2e3148;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 20px;
+  }
+  .logo {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+  }
+  header h1 { font-size: 1.6rem; font-weight: 700; }
+  header p  { font-size: 0.85rem; color: var(--muted); margin-top: 3px; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 24px;
+    margin-bottom: 24px;
+  }
+  .ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-group label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .ctrl-group input[type=range] { accent-color: var(--accent); width: 180px; cursor: pointer; }
+  .ctrl-group select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+  }
+  #nLabel {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 700;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 0.9rem;
+    min-width: 36px;
+    text-align: center;
+  }
+  .window-info {
+    margin-left: auto;
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.6;
+  }
+  .window-info strong { color: var(--text); }
+
+  /* KPI row */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .kpi.symp::before  { background: var(--accent2); }
+  .kpi.nosymp::before{ background: var(--green); }
+  .kpi.unk::before   { background: var(--yellow); }
+  .kpi.total::before { background: var(--accent); }
+  .kpi-label { font-size: 0.73rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .kpi-value { font-size: 2rem; font-weight: 800; line-height: 1; }
+  .kpi-pct   { font-size: 0.85rem; color: var(--muted); margin-top: 4px; }
+  .kpi.symp  .kpi-value { color: var(--accent2); }
+  .kpi.nosymp .kpi-value{ color: var(--green);   }
+  .kpi.unk   .kpi-value { color: var(--yellow);  }
+  .kpi.total .kpi-value { color: var(--accent);  }
+
+  /* Chart grid */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  @media (max-width: 820px) { .chart-grid { grid-template-columns: 1fr; } }
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+  .chart-card h3 { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 16px; text-transform: uppercase; letter-spacing: .06em; }
+  .chart-card canvas { max-height: 300px; }
+
+  /* Wide card */
+  .chart-card.wide {
+    grid-column: 1 / -1;
+  }
+
+  /* Table */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+  .table-card h3 { font-size: 0.9rem; font-weight: 600; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .06em; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+  }
+  td { padding: 8px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .badge {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: .04em;
+  }
+  .badge-yes  { background: rgba(255,101,132,.18); color: var(--accent2); }
+  .badge-no   { background: rgba(67,233,123,.18);  color: var(--green); }
+  .badge-unk  { background: rgba(249,202,36,.18);  color: var(--yellow); }
+  .badge-m    { background: rgba(108,99,255,.18);  color: var(--accent); }
+  .badge-f    { background: rgba(255,101,132,.12); color: #ff9fb0; }
+
+  footer { text-align: center; font-size: 0.75rem; color: var(--muted); padding-top: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🦠</div>
+  <div>
+    <h1>EpiHack — Symptom Surveillance Dashboard</h1>
+    <p>Population cohort report &mdash; grouped by Age · Sex · Postal Code &nbsp;|&nbsp; Window: last <strong id="headerN">7</strong> days</p>
+  </div>
+</header>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="ctrl-group">
+    <label>Lookback window (N days) &nbsp;<span id="nLabel">7</span></label>
+    <input type="range" id="nSlider" min="7" max="180" step="1" value="7">
+  </div>
+  <div class="ctrl-group">
+    <label>Group by</label>
+    <select id="groupBy">
+      <option value="ageSex">Age Group + Sex</option>
+      <option value="ageOnly">Age Group Only</option>
+      <option value="sexOnly">Sex Only</option>
+      <option value="postalPrefix">Postal Area (85000–85049 / 85050–85100)</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>Sex filter</label>
+    <select id="sexFilter">
+      <option value="ALL">All</option>
+      <option value="MALE">Male only</option>
+      <option value="FEMALE">Female only</option>
+    </select>
+  </div>
+  <div class="window-info" id="windowInfo"></div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-row">
+  <div class="kpi total">
+    <div class="kpi-label">Total Records</div>
+    <div class="kpi-value" id="kTotal">—</div>
+    <div class="kpi-pct" id="kTotalSub">in window</div>
+  </div>
+  <div class="kpi symp">
+    <div class="kpi-label">Symptomatic</div>
+    <div class="kpi-value" id="kSymp">—</div>
+    <div class="kpi-pct" id="kSympPct">—</div>
+  </div>
+  <div class="kpi nosymp">
+    <div class="kpi-label">No Symptoms</div>
+    <div class="kpi-value" id="kNoSymp">—</div>
+    <div class="kpi-pct" id="kNoSympPct">—</div>
+  </div>
+  <div class="kpi unk">
+    <div class="kpi-label">Unknown / Pending</div>
+    <div class="kpi-value" id="kUnk">—</div>
+    <div class="kpi-pct" id="kUnkPct">—</div>
+  </div>
+</div>
+
+<!-- Charts row 1 -->
+<div class="chart-grid">
+  <div class="chart-card">
+    <h3>% Symptomatic vs No Symptoms by Group</h3>
+    <canvas id="barChart"></canvas>
+  </div>
+  <div class="chart-card">
+    <h3>Symptom Status Distribution (Donut)</h3>
+    <canvas id="donutChart"></canvas>
+  </div>
+  <div class="chart-card wide">
+    <h3>Daily Case Count — Symptomatic vs No Symptoms (within window)</h3>
+    <canvas id="timeChart"></canvas>
+  </div>
+</div>
+
+<!-- Detail table -->
+<div class="table-card">
+  <h3>Individual Records in Window</h3>
+  <table id="detailTable">
+    <thead>
+      <tr>
+        <th>Date of Report</th>
+        <th>Age</th>
+        <th>Age Group</th>
+        <th>Sex</th>
+        <th>Postal Code</th>
+        <th>Symptoms</th>
+        <th>No Symptoms</th>
+        <th>Occupation</th>
+      </tr>
+    </thead>
+    <tbody id="detailBody"></tbody>
+  </table>
+</div>
+
+<footer>EpiHack &bull; Epidemiological Surveillance System &bull; Data: fakeData.csv &bull; Generated: <span id="genDate"></span></footer>
+
+<script>
+// ─── Raw data ─────────────────────────────────────────────────────────────────
+// Columns: noSymptoms, symptoms, dateIllness, age, sex, dateReport, postalCode, occupation
+const RAW = [
+  ["NO","YES","1/3/25",34,"FEMALE","1/5/25",85001,"Teacher"],
+  ["YES","NO","2/11/25",45,"MALE","2/12/25",85002,"Engineer"],
+  ["NO","YES","3/14/25",29,"FEMALE","3/16/25",85003,"Nurse"],
+  ["NO","YES","4/1/25",51,"MALE","4/3/25",85004,"Driver"],
+  ["YES","NO","1/22/25",38,"FEMALE","1/23/25",85005,"Clerk"],
+  ["NO","YES","5/5/25",62,"MALE","5/6/25",85006,"Retired"],
+  ["NO","UNKNOWN","2/17/25",40,"FEMALE","2/18/25",85007,"Manager"],
+  ["NO","YES","3/9/25",27,"MALE","3/11/25",85008,"Cook"],
+  ["YES","NO","4/18/25",19,"FEMALE","4/19/25",85009,"Student"],
+  ["NO","YES","5/20/25",55,"MALE","5/22/25",85010,"Mechanic"],
+  ["YES","NO","1/12/25",41,"MALE","1/13/25",85011,"Accountant"],
+  ["NO","YES","1/14/25",33,"FEMALE","1/15/25",85012,"Teacher"],
+  ["NO","YES","1/18/25",29,"MALE","1/19/25",85013,"Mechanic"],
+  ["YES","NO","1/20/25",52,"FEMALE","1/21/25",85014,"Clerk"],
+  ["NO","UNKNOWN","1/22/25",38,"MALE","1/23/25",85015,"Driver"],
+  ["NO","YES","1/24/25",46,"FEMALE","1/25/25",85016,"Nurse"],
+  ["YES","NO","1/26/25",24,"MALE","1/27/25",85017,"Student"],
+  ["NO","YES","1/28/25",58,"FEMALE","1/29/25",85018,"Retired"],
+  ["NO","YES","1/30/25",36,"MALE","1/31/25",85019,"Electrician"],
+  ["YES","NO","2/1/25",27,"FEMALE","2/2/25",85020,"Receptionist"],
+  ["NO","YES","2/3/25",44,"MALE","2/4/25",85021,"Engineer"],
+  ["NO","UNKNOWN","2/5/25",31,"FEMALE","2/6/25",85022,"Analyst"],
+  ["YES","NO","2/7/25",49,"MALE","2/8/25",85023,"Sales"],
+  ["NO","YES","2/9/25",54,"FEMALE","2/10/25",85024,"Doctor"],
+  ["NO","YES","2/11/25",35,"MALE","2/12/25",85025,"Chef"],
+  ["YES","NO","2/13/25",22,"FEMALE","2/14/25",85026,"Student"],
+  ["NO","YES","2/15/25",40,"MALE","2/16/25",85027,"Police Officer"],
+  ["NO","UNKNOWN","2/17/25",47,"FEMALE","2/18/25",85028,"Consultant"],
+  ["YES","NO","2/19/25",30,"MALE","2/20/25",85029,"Technician"],
+  ["NO","YES","2/21/25",37,"FEMALE","2/22/25",85030,"Teacher"],
+  ["NO","YES","2/23/25",51,"MALE","2/24/25",85031,"Farmer"],
+  ["YES","NO","2/25/25",26,"FEMALE","2/26/25",85032,"Cashier"],
+  ["NO","UNKNOWN","2/27/25",43,"MALE","2/28/25",85033,"Manager"],
+  ["NO","YES","3/1/25",60,"FEMALE","3/2/25",85034,"Retired"],
+  ["YES","NO","3/3/25",28,"MALE","3/4/25",85035,"Banker"],
+  ["NO","YES","3/5/25",34,"FEMALE","3/6/25",85036,"Pharmacist"],
+  ["NO","YES","3/7/25",56,"MALE","3/8/25",85037,"Security Guard"],
+  ["YES","NO","3/9/25",23,"FEMALE","3/10/25",85038,"Student"],
+  ["NO","UNKNOWN","3/11/25",45,"MALE","3/12/25",85039,"Accountant"],
+  ["NO","YES","3/13/25",39,"FEMALE","3/14/25",85040,"Lawyer"],
+  ["NO","YES","3/15/25",32,"MALE","3/16/25",85041,"Designer"],
+  ["YES","NO","3/17/25",50,"FEMALE","3/18/25",85042,"Librarian"],
+  ["NO","UNKNOWN","3/19/25",42,"MALE","3/20/25",85043,"Supervisor"],
+  ["NO","YES","3/21/25",31,"FEMALE","3/22/25",85044,"Analyst"],
+  ["YES","NO","3/23/25",21,"MALE","3/24/25",85045,"Student"],
+  ["NO","YES","3/25/25",57,"FEMALE","3/26/25",85046,"Nurse"],
+  ["NO","UNKNOWN","3/27/25",48,"MALE","3/28/25",85047,"Administrator"],
+  ["YES","NO","3/29/25",25,"FEMALE","3/30/25",85048,"Receptionist"],
+  ["NO","YES","3/31/25",53,"MALE","4/1/25",85049,"Mechanic"],
+  ["NO","YES","4/2/25",38,"FEMALE","4/3/25",85050,"Teacher"],
+  ["YES","NO","4/4/25",34,"MALE","4/5/25",85051,"Engineer"],
+  ["NO","YES","4/6/25",45,"FEMALE","4/7/25",85052,"Teacher"],
+  ["NO","UNKNOWN","4/8/25",29,"MALE","4/9/25",85053,"Driver"],
+  ["NO","YES","4/10/25",57,"FEMALE","4/11/25",85054,"Nurse"],
+  ["YES","NO","4/12/25",23,"MALE","4/13/25",85055,"Student"],
+  ["NO","YES","4/14/25",61,"FEMALE","4/15/25",85056,"Retired"],
+  ["NO","YES","4/16/25",39,"MALE","4/17/25",85057,"Technician"],
+  ["YES","NO","4/18/25",26,"FEMALE","4/19/25",85058,"Cashier"],
+  ["NO","UNKNOWN","4/20/25",48,"MALE","4/21/25",85059,"Manager"],
+  ["NO","YES","4/22/25",52,"FEMALE","4/23/25",85060,"Doctor"],
+  ["YES","NO","4/24/25",31,"MALE","4/25/25",85061,"Accountant"],
+  ["NO","YES","4/26/25",43,"FEMALE","4/27/25",85062,"Pharmacist"],
+  ["NO","UNKNOWN","4/28/25",37,"MALE","4/29/25",85063,"Consultant"],
+  ["NO","YES","4/30/25",55,"FEMALE","5/1/25",85064,"Chef"],
+  ["YES","NO","5/2/25",20,"MALE","5/3/25",85065,"Student"],
+  ["NO","YES","5/4/25",47,"FEMALE","5/5/25",85066,"Lawyer"],
+  ["NO","YES","5/6/25",63,"MALE","5/7/25",85067,"Security Guard"],
+  ["YES","NO","5/8/25",24,"FEMALE","5/9/25",85068,"Receptionist"],
+  ["NO","UNKNOWN","5/10/25",41,"MALE","5/11/25",85069,"Administrator"],
+  ["NO","YES","5/12/25",36,"FEMALE","5/13/25",85070,"Teacher"],
+  ["YES","NO","5/14/25",28,"MALE","5/15/25",85071,"Banker"],
+  ["NO","YES","5/16/25",58,"FEMALE","5/17/25",85072,"Nurse"],
+  ["NO","UNKNOWN","5/18/25",46,"MALE","5/19/25",85073,"Supervisor"],
+  ["NO","YES","5/20/25",50,"FEMALE","5/21/25",85074,"Doctor"],
+  ["YES","NO","5/22/25",22,"MALE","5/23/25",85075,"Student"],
+  ["NO","YES","5/24/25",44,"FEMALE","5/25/25",85076,"Scientist"],
+  ["NO","UNKNOWN","5/26/25",35,"MALE","5/27/25",85077,"Consultant"],
+  ["NO","YES","5/28/25",59,"FEMALE","5/29/25",85078,"Retired"],
+  ["YES","NO","5/30/25",27,"MALE","5/31/25",85079,"Mechanic"],
+  ["NO","YES","6/1/25",53,"FEMALE","6/2/25",85080,"Manager"],
+  ["NO","UNKNOWN","6/3/25",49,"MALE","6/4/25",85081,"Accountant"],
+  ["YES","NO","6/5/25",25,"FEMALE","6/6/25",85082,"Cashier"],
+  ["NO","YES","6/7/25",42,"MALE","6/8/25",85083,"Police Officer"],
+  ["NO","YES","6/9/25",33,"FEMALE","6/10/25",85084,"Teacher"],
+  ["YES","NO","6/11/25",30,"MALE","6/12/25",85085,"Driver"],
+  ["NO","UNKNOWN","6/13/25",47,"FEMALE","6/14/25",85086,"Analyst"],
+  ["NO","YES","6/15/25",62,"MALE","6/16/25",85087,"Farmer"],
+  ["YES","NO","6/17/25",21,"FEMALE","6/18/25",85088,"Student"],
+  ["NO","YES","6/19/25",56,"MALE","6/20/25",85089,"Electrician"],
+  ["NO","UNKNOWN","6/21/25",40,"FEMALE","6/22/25",85090,"Administrator"],
+  ["YES","NO","6/23/25",26,"MALE","6/24/25",85091,"Technician"],
+  ["NO","YES","6/25/25",45,"FEMALE","6/26/25",85092,"Nurse"],
+  ["NO","YES","6/27/25",51,"MALE","6/28/25",85093,"Lawyer"],
+  ["YES","NO","6/29/25",24,"FEMALE","6/30/25",85094,"Receptionist"],
+  ["NO","UNKNOWN","7/1/25",39,"MALE","7/2/25",85095,"Manager"],
+  ["NO","YES","7/3/25",60,"FEMALE","7/4/25",85096,"Retired"],
+  ["YES","NO","7/5/25",23,"MALE","7/6/25",85097,"Student"],
+  ["NO","YES","7/7/25",37,"FEMALE","7/8/25",85098,"Teacher"],
+  ["NO","UNKNOWN","7/9/25",43,"MALE","7/10/25",85099,"Consultant"],
+  ["NO","YES","7/11/25",54,"FEMALE","7/12/25",85100,"Doctor"]
+];
+
+// Parse dates
+function parseDate(s) {
+  const [m, d, y] = s.split('/');
+  return new Date(2000 + parseInt(y), parseInt(m) - 1, parseInt(d));
+}
+
+const records = RAW.map(r => ({
+  noSymptoms: r[0],
+  symptoms:   r[1],
+  age:        r[3],
+  sex:        r[4],
+  dateReport: parseDate(r[5]),
+  postal:     r[6],
+  occupation: r[7],
+  ageGroup:   ageGroup(r[3])
+}));
+
+// Determine max date in dataset
+const maxDate = new Date(Math.max(...records.map(r => r.dateReport)));
+
+function ageGroup(age) {
+  if (age <= 30) return '18–30';
+  if (age <= 45) return '31–45';
+  if (age <= 60) return '46–60';
+  return '61+';
+}
+
+function postalArea(p) {
+  return p <= 85049 ? '85001–85049' : '85050–85100';
+}
+
+// Chart instances
+let barChart, donutChart, timeChart;
+
+function getGroupKey(r, groupBy) {
+  switch(groupBy) {
+    case 'ageSex':      return `${r.ageGroup} · ${r.sex === 'MALE' ? '♂ Male' : '♀ Female'}`;
+    case 'ageOnly':     return r.ageGroup;
+    case 'sexOnly':     return r.sex === 'MALE' ? '♂ Male' : '♀ Female';
+    case 'postalPrefix': return postalArea(r.postal);
+  }
+}
+
+function fmt(d) {
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
+function update() {
+  const N        = parseInt(document.getElementById('nSlider').value);
+  const groupBy  = document.getElementById('groupBy').value;
+  const sexFilt  = document.getElementById('sexFilter').value;
+
+  document.getElementById('nLabel').textContent   = N;
+  document.getElementById('headerN').textContent  = N;
+
+  // Window: maxDate - N + 1 days
+  const windowStart = new Date(maxDate);
+  windowStart.setDate(windowStart.getDate() - N + 1);
+  windowStart.setHours(0,0,0,0);
+
+  document.getElementById('windowInfo').innerHTML =
+    `<strong>Dataset max date:</strong> ${fmt(maxDate)}<br>` +
+    `<strong>Window:</strong> ${fmt(windowStart)} → ${fmt(maxDate)}`;
+
+  // Filter
+  let filtered = records.filter(r => r.dateReport >= windowStart && r.dateReport <= maxDate);
+  if (sexFilt !== 'ALL') filtered = filtered.filter(r => r.sex === sexFilt);
+
+  // KPIs
+  const total  = filtered.length;
+  const symp   = filtered.filter(r => r.symptoms === 'YES').length;
+  const noSymp = filtered.filter(r => r.noSymptoms === 'YES').length;
+  const unk    = filtered.filter(r => r.symptoms === 'UNKNOWN').length;
+  const pct    = v => total ? (v / total * 100).toFixed(1) + '%' : '—';
+
+  document.getElementById('kTotal').textContent    = total;
+  document.getElementById('kTotalSub').textContent = `of 100 total records`;
+  document.getElementById('kSymp').textContent     = symp;
+  document.getElementById('kSympPct').textContent  = `${pct(symp)} of window`;
+  document.getElementById('kNoSymp').textContent   = noSymp;
+  document.getElementById('kNoSympPct').textContent= `${pct(noSymp)} of window`;
+  document.getElementById('kUnk').textContent      = unk;
+  document.getElementById('kUnkPct').textContent   = `${pct(unk)} of window`;
+
+  // Group data
+  const groups = {};
+  filtered.forEach(r => {
+    const k = getGroupKey(r, groupBy);
+    if (!groups[k]) groups[k] = { symp:0, noSymp:0, unk:0 };
+    if (r.symptoms   === 'YES') groups[k].symp++;
+    if (r.noSymptoms === 'YES') groups[k].noSymp++;
+    if (r.symptoms   === 'UNKNOWN') groups[k].unk++;
+  });
+
+  const labels     = Object.keys(groups).sort();
+  const sympPcts   = labels.map(k => { const g = groups[k]; const t = g.symp+g.noSymp+g.unk; return t ? +(g.symp/t*100).toFixed(1) : 0; });
+  const noSympPcts = labels.map(k => { const g = groups[k]; const t = g.symp+g.noSymp+g.unk; return t ? +(g.noSymp/t*100).toFixed(1) : 0; });
+  const unkPcts    = labels.map(k => { const g = groups[k]; const t = g.symp+g.noSymp+g.unk; return t ? +(g.unk/t*100).toFixed(1) : 0; });
+  const counts     = labels.map(k => groups[k].symp+groups[k].noSymp+groups[k].unk);
+
+  // ── BAR CHART ──────────────────────────────────────────────────────────────
+  const barData = {
+    labels,
+    datasets: [
+      {
+        label: '% Symptomatic',
+        data: sympPcts,
+        backgroundColor: 'rgba(255,101,132,0.82)',
+        borderColor: '#ff6584',
+        borderWidth: 1.5,
+        borderRadius: 5
+      },
+      {
+        label: '% No Symptoms',
+        data: noSympPcts,
+        backgroundColor: 'rgba(67,233,123,0.82)',
+        borderColor: '#43e97b',
+        borderWidth: 1.5,
+        borderRadius: 5
+      },
+      {
+        label: '% Unknown',
+        data: unkPcts,
+        backgroundColor: 'rgba(249,202,36,0.70)',
+        borderColor: '#f9ca24',
+        borderWidth: 1.5,
+        borderRadius: 5
+      }
+    ]
+  };
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: barData,
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8b8fa8', font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            afterLabel: (ctx) => `n = ${counts[ctx.dataIndex]}`
+          }
+        }
+      },
+      scales: {
+        x: { stacked: false, ticks: { color: '#8b8fa8', font:{size:10} }, grid: { color: '#2e3148' } },
+        y: {
+          min: 0, max: 100,
+          ticks: { color: '#8b8fa8', callback: v => v + '%' },
+          grid: { color: '#2e3148' }
+        }
+      }
+    }
+  });
+
+  // ── DONUT CHART ────────────────────────────────────────────────────────────
+  if (donutChart) donutChart.destroy();
+  donutChart = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Symptomatic', 'No Symptoms', 'Unknown / Pending'],
+      datasets: [{
+        data: [symp, noSymp, unk],
+        backgroundColor: ['rgba(255,101,132,0.85)','rgba(67,233,123,0.85)','rgba(249,202,36,0.80)'],
+        borderColor: ['#ff6584','#43e97b','#f9ca24'],
+        borderWidth: 2,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '62%',
+      plugins: {
+        legend: { position:'bottom', labels: { color:'#8b8fa8', padding:14, font:{size:11} } },
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed;
+              const t = symp + noSymp + unk;
+              return `  ${ctx.label}: ${v} (${t ? (v/t*100).toFixed(1) : 0}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // ── TIME SERIES CHART ──────────────────────────────────────────────────────
+  // Build daily buckets over the window
+  const days = {};
+  const cur = new Date(windowStart);
+  while (cur <= maxDate) {
+    const key = cur.toISOString().slice(0,10);
+    days[key] = { symp:0, noSymp:0, unk:0 };
+    cur.setDate(cur.getDate() + 1);
+  }
+  filtered.forEach(r => {
+    const key = r.dateReport.toISOString().slice(0,10);
+    if (days[key]) {
+      if (r.symptoms   === 'YES') days[key].symp++;
+      if (r.noSymptoms === 'YES') days[key].noSymp++;
+      if (r.symptoms   === 'UNKNOWN') days[key].unk++;
+    }
+  });
+  const timeLabels = Object.keys(days).sort();
+  const timeFmt    = d => { const dt = new Date(d+'T12:00:00'); return dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}); };
+
+  if (timeChart) timeChart.destroy();
+  timeChart = new Chart(document.getElementById('timeChart'), {
+    type: 'line',
+    data: {
+      labels: timeLabels.map(timeFmt),
+      datasets: [
+        {
+          label: 'Symptomatic',
+          data: timeLabels.map(k => days[k].symp),
+          borderColor: '#ff6584',
+          backgroundColor: 'rgba(255,101,132,0.12)',
+          fill: true, tension: 0.35, pointRadius: 3, borderWidth: 2
+        },
+        {
+          label: 'No Symptoms',
+          data: timeLabels.map(k => days[k].noSymp),
+          borderColor: '#43e97b',
+          backgroundColor: 'rgba(67,233,123,0.10)',
+          fill: true, tension: 0.35, pointRadius: 3, borderWidth: 2
+        },
+        {
+          label: 'Unknown',
+          data: timeLabels.map(k => days[k].unk),
+          borderColor: '#f9ca24',
+          backgroundColor: 'rgba(249,202,36,0.08)',
+          fill: true, tension: 0.35, pointRadius: 3, borderWidth: 2
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color:'#8b8fa8', font:{size:11} } } },
+      scales: {
+        x: { ticks: { color:'#8b8fa8', font:{size:10}, maxTicksLimit: 20, maxRotation:45 }, grid:{color:'#2e3148'} },
+        y: { ticks: { color:'#8b8fa8', stepSize:1 }, grid:{color:'#2e3148'}, beginAtZero:true }
+      }
+    }
+  });
+
+  // ── DETAIL TABLE ───────────────────────────────────────────────────────────
+  const tbody = document.getElementById('detailBody');
+  tbody.innerHTML = '';
+  const sorted = [...filtered].sort((a,b) => b.dateReport - a.dateReport);
+  sorted.forEach(r => {
+    const sClass = r.symptoms === 'YES' ? 'badge-yes' : (r.symptoms === 'NO' ? 'badge-no' : 'badge-unk');
+    const nClass = r.noSymptoms === 'YES' ? 'badge-yes' : 'badge-no';
+    const sexClass= r.sex === 'MALE' ? 'badge-m' : 'badge-f';
+    tbody.innerHTML += `
+      <tr>
+        <td>${fmt(r.dateReport)}</td>
+        <td>${r.age}</td>
+        <td>${r.ageGroup}</td>
+        <td><span class="badge ${sexClass}">${r.sex}</span></td>
+        <td>${r.postal}</td>
+        <td><span class="badge ${sClass}">${r.symptoms}</span></td>
+        <td><span class="badge ${nClass}">${r.noSymptoms}</span></td>
+        <td>${r.occupation}</td>
+      </tr>`;
+  });
+  if (sorted.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px">No records in this window.</td></tr>`;
+  }
+}
+
+// Events
+document.getElementById('nSlider').addEventListener('input', update);
+document.getElementById('groupBy').addEventListener('change', update);
+document.getElementById('sexFilter').addEventListener('change', update);
+
+// Init
+document.getElementById('genDate').textContent = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+update();
+</script>
+</body>
+</html>
