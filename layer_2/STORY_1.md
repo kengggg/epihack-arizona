@@ -1,7 +1,5 @@
 # Story 1 - Temporal Risk
 
-![](../images/layer_2-overview.svg)
-
 ## Objectives
 To give the user a temporal trends based on the reported symptom.
 
