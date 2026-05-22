@@ -7,6 +7,9 @@
 A [user stories document](https://github.com/kengggg/epihack-arizona/blob/main/analysis/UserStories/EpiHack_UserStories_LLMPrompts.pdf) was created to pair with 
 LLM prompts for each user case scenarios.
 
+Claude Cowork using Sonnet 4.6 was prompted with a collection of prompts corresponding to different user cases for users and Public Health Officials. For each user case a Pthon Script was created to extract data for the corresponding dashboard in HTML.
+
+
 ### User Story Prompts — Individual Survey Participants
 
 | Case| User story | Python Script | HTML dashboard | View | Notes | 
