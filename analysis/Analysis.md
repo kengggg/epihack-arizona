@@ -1,9 +1,10 @@
 ## EpiHack 2026: User data analysis information products
 
 <p><img src="https://github.com/kengggg/epihack-arizona/blob/main/analysis/figs/epihack-community-health.png" width=900></p>
+
 ***
 
-**Mockup dashboards created using a small data sample `epihack-mini.db`**
+**All mockup dashboards created using a small data sample `epihack-mini.db`, provided by Keng**
 
 A [user stories document](https://github.com/kengggg/epihack-arizona/blob/main/analysis/UserStories/EpiHack_UserStories_LLMPrompts.pdf) was created to pair with  LLM prompts for each user case scenarios.
 
