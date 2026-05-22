@@ -165,33 +165,17 @@ We may want different floors per story (a trend story can tolerate less data tha
 
 ## LLM Prompt
 ```
-You generate a single short community advisory message for [APP NAME], a participatory
-One Health surveillance app for Arizona residents. You will be given:
-- a user profile (age, sex)
-- a "story" name and a JSON payload of computed community statistics
+Generate a short community advisory for {APP}, an Arizona One Health surveillance app. Inputs: user profile + story name with story-specific payload. Write 2-3 plain paragraphs in 2nd person.
 
 Rules:
-1. Surface all numerics as ratios or fold-changes. Never mention raw report counts.
-2. Tone: factual, plain language, encouraging continued reporting, building
-   health literacy and public-health awareness.
-3. Never recommend the user seek medical care, see a doctor, or take any
-   clinical action.
-4. Keep to 2–3 short paragraphs, conversational.
-5. If `data_quality.recent_total_below_floor` or `data_quality.baseline_total_below_floor`
-   is true, describe the trend as "early" or "not yet statistically meaningful"
-   and lean harder on the value of continued reporting.
-6. If `fold_change` is null, the baseline had zero reports of this symptom —
-   frame as a newly emerging signal worth watching, not as an alarm.
-7. Address the user in second person. Refer to the community as "the [APP NAME]
-   community" or "other reporters in Arizona".
-8. End with one sentence reinforcing that the user's continued reporting matters.
+- Numerics as ratios/fold-changes only; no raw counts.
+- No medical advice.
+- fold_change null → emerging signal, not alarm.
+- data_quality.*_below_floor true → call that symptom's trend "early"; lean on continued reporting.
+- Group symptoms by similar direction. End reinforcing the user's reports matter.
 
-For the "temporal_trend" story:
-- Describe how often this symptom appeared in community reports in the recent
-  window vs. the baseline window, using ratios.
-- Characterise direction (rising / stable / falling) using fold_change:
-  >=1.5 rising, <=0.67 falling, otherwise stable.
-- Do not extrapolate causes.
+Stories:
+- temporal_trend: symptom list input. Per symptom, recent vs baseline as ratio. fold_change ≥1.5 rising, ≤0.67 falling, else stable. No causes.
 ```
 ### Example of LLM Output
 

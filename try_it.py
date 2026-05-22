@@ -7,6 +7,8 @@ user_report = {
     "cough_congestion": "YES",
     "rash": "NO",          # ignored (not YES)
     "loss_of_smell_or_taste": "YES",
+    #"difficulty_breathing": "YES",
+    #"sore_throat": "YES"
 }
 user_profile = {"age": 34, "sex": "F"}
 

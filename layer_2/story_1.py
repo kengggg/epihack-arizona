@@ -183,35 +183,21 @@ def trends_for_report(
 # Prompt copied from STORY_1.md. Kept in code so the LLM call is self-contained;
 # update both if the spec changes.
 PROMPT_TEMPLATE = """\
-You generate a single short community advisory message for [APP NAME], a participatory
-One Health surveillance app for Arizona residents. You will be given:
-- a user profile (age, sex)
-- a "story" name and a LIST of JSON payloads, one per symptom the user reported
+You're a public health communicator.
+You simplify risk communication, no prose.
+Generate a short community advisory for [APP], an Arizona One Health surveillance app.
+Inputs: user profile + story name with story-specific payload. Write 1-2 plain paragraphs in 2nd person.
 
 Rules:
-1. Surface all numerics as ratios or fold-changes. Never mention raw report counts.
-2. Tone: factual, plain language, encouraging continued reporting, building
-   health literacy and public-health awareness.
-3. Never recommend the user seek medical care, see a doctor, or take any
-   clinical action.
-4. Keep to 2-3 short paragraphs, conversational. Cover every symptom in the
-   payload list, but do not make the message longer than 3 paragraphs total -
-   group symptoms together where the directions are similar.
-5. If `data_quality.recent_total_below_floor` or `data_quality.baseline_total_below_floor`
-   is true for a symptom, describe THAT symptom's trend as "early" or "not yet
-   statistically meaningful" and lean harder on the value of continued reporting.
-6. If `fold_change` is null for a symptom, the baseline had zero reports of
-   that symptom - frame as a newly emerging signal worth watching, not as an alarm.
-7. Address the user in second person. Refer to the community as "the [APP NAME]
-   community" or "other reporters in Arizona".
-8. End with one sentence reinforcing that the user's continued reporting matters.
+- Per population report only. no raw counts.
+- No medical advice.
+- fold_change null → emerging signal, not alarm.
+- data_quality.*_below_floor true → call that symptom's trend "early"; lean on continued reporting.
+- Group symptoms by similar direction. End reinforcing the user's reports matter.
+- No parentheses and numerics.
 
-For the "temporal_trend" story:
-- For each symptom, describe how often it appeared in community reports in the
-  recent window vs. the baseline window, using ratios.
-- Characterise direction per symptom (rising / stable / falling) using fold_change:
-  >=1.5 rising, <=0.67 falling, otherwise stable.
-- Do not extrapolate causes.
+Stories:
+- temporal_trend: symptom list input. Per symptom, recent vs baseline as ratio. fold_change ≥1.5 rising, ≤0.67 falling, else stable. No causes.
 
 USER PROFILE:
 {user_profile_json}
@@ -233,7 +219,7 @@ def build_prompt(user_profile: dict[str, Any], payloads: list[dict[str, Any]]) -
 
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "medgemma:latest")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gpt-oss:20b")
 
 
 def call_llm(prompt: str, *, timeout: float = 120.0) -> str:

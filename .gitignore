@@ -2,3 +2,5 @@
 
 *shm
 *wal
+
+*.pyc
