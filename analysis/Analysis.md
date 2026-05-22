@@ -10,6 +10,7 @@ LLM prompts for each user case scenarios.
 ### User Story Prompts — Individual Survey Participants
 
 | Case| User story | Python Script | HTML dashboard | View | Notes | 
+| :--: | :-- | :--: | :--: | :--: | :-- |
 | 1 | Personal Symptom Trajectory | [Python](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/symptom_trajectory_report.py) | [dashboard](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/symptom_trajectory_report.html) | [image](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/symptom_trajectory_dashboard.png) |  |
 | 2 |  Community Comparison| [Python](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/community_comparison_report.py) | [dashboard](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/community_comparison_report.html) | [image](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/community_comparison_dashboard.png) |  |
 | 3 |  Emerging Symptom Alert| [Python](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/emerging_signal_alert.py) | [dashboard](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/emerging_signal_alert.html) | [image](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/emerging_signal_alert_dashboard.png) |  |
@@ -35,6 +36,7 @@ LLM prompts for each user case scenarios.
 ### User Story Prompts — Public Health Officials
 
 | Case| User story | Python Script | HTML dashboard | Mock-up | Notes | 
+| :--: | :-- | :--: | :--: | :--: | :-- |
 | 1 | Outbreak Signal Summary Brief | [Python](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/situation_report.py) | [dashboard](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/situation_report.html) | [image](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/situation_report_dashboard.png) |  |
 | 2 | Geographic Cluster Detection | [Python](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/spatial_cluster_report.py) | [dashboard](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/spatial_cluster_report.html) | [image](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/spatial_cluster_dashboard.png) |  |
 | 3 | One Health Zoonotic Risk Assessment | [Python](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/one_health_risk_report.py) | [dashboard](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/one_health_risk_report.html) | [image](https://github.com/kengggg/epihack-arizona/blob/main/analysis/dashboard/V2/one_health_risk_dashboard.png) |  |
