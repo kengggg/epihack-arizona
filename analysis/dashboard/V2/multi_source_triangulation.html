@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Multi-Source Surveillance Triangulation — Arizona</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --accent: #6c63ff;
+    --red: #ff4757; --orange: #ffa502; --green: #43e97b;
+    --blue: #1e90ff; --cyan: #00d2d3; --yellow: #ffd32a;
+    --text: #e8eaf6; --muted: #8892a4;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; }
+  header { background: var(--surface); border-bottom: 2px solid var(--accent); padding: 18px 28px; }
+  header h1 { font-size: 1.5rem; color: var(--accent); }
+  header p { color: var(--muted); font-size: 0.85rem; margin-top: 4px; }
+  .meta-bar { display: flex; gap: 20px; margin-top: 10px; flex-wrap: wrap; }
+  .meta-chip { background: rgba(108,99,255,0.15); border: 1px solid var(--accent);
+                border-radius: 20px; padding: 4px 14px; font-size: 0.78rem; color: var(--accent); }
+  .tier-chip { border-radius: 20px; padding: 4px 14px; font-size: 0.82rem; font-weight: 700;
+                display: inline-block; }
+  .tier-1 { background: rgba(255,71,87,0.25); color: var(--red); border: 1px solid var(--red); }
+  .tier-2 { background: rgba(255,165,2,0.25); color: var(--orange); border: 1px solid var(--orange); }
+  .tier-3 { background: rgba(136,146,164,0.25); color: var(--muted); border: 1px solid var(--muted); }
+  .controls { background: var(--surface); border-bottom: 1px solid #2a2d3e;
+               padding: 14px 28px; display: flex; gap: 24px; flex-wrap: wrap; align-items: center; }
+  .ctrl-group { display: flex; align-items: center; gap: 8px; }
+  .ctrl-group label { color: var(--muted); font-size: 0.82rem; }
+  .ctrl-group input[type=range] { accent-color: var(--accent); cursor: pointer; }
+  .ctrl-group select { background: var(--bg); color: var(--text);
+                        border: 1px solid var(--accent); border-radius: 6px;
+                        padding: 4px 8px; font-size: 0.82rem; cursor: pointer; }
+  .ctrl-group span { color: var(--accent); font-weight: 700; min-width: 30px; }
+  .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+                padding: 20px 28px; }
+  .panel { background: var(--surface); border-radius: 10px; padding: 20px;
+            border: 1px solid #2a2d3e; }
+  .panel-full { grid-column: 1 / -1; }
+  .panel h2 { font-size: 0.95rem; color: var(--accent); margin-bottom: 14px;
+               font-weight: 600; letter-spacing: 0.02em; }
+  .canvas-wrap { position: relative; height: 320px; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.82rem; }
+  thead th { background: rgba(108,99,255,0.15); color: var(--accent);
+              padding: 8px 10px; text-align: left; border-bottom: 2px solid var(--accent);
+              cursor: pointer; user-select: none; white-space: nowrap; }
+  thead th:hover { background: rgba(108,99,255,0.25); }
+  tbody tr { border-bottom: 1px solid #2a2d3e; transition: background 0.15s; }
+  tbody tr:hover { background: rgba(108,99,255,0.07); }
+  tbody td { padding: 8px 10px; vertical-align: top; }
+  .sig-up { color: var(--red); font-weight: 700; }
+  .sig-ok { color: var(--muted); }
+  .sig-na { color: #2a2d3e; }
+  .badge { display: inline-block; border-radius: 12px; padding: 2px 10px;
+            font-size: 0.75rem; font-weight: 700; }
+  .narrative-box { background: var(--bg); border: 1px solid #2a2d3e; border-radius: 8px;
+                    padding: 18px; font-size: 0.84rem; line-height: 1.7; color: var(--text);
+                    font-family: 'Courier New', monospace; white-space: pre-wrap;
+                    max-height: 420px; overflow-y: auto; }
+  .prompt-box { background: var(--bg); border: 1px solid var(--accent); border-radius: 8px;
+                 padding: 14px; font-size: 0.78rem; line-height: 1.6; color: var(--muted);
+                 max-height: 320px; overflow-y: auto; }
+  .summary-cards { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .summary-card { flex: 1; min-width: 150px; background: var(--bg); border-radius: 8px;
+                   padding: 14px 16px; border: 1px solid #2a2d3e; text-align: center; }
+  .summary-card .sc-val { font-size: 2rem; font-weight: 800; }
+  .summary-card .sc-lbl { font-size: 0.78rem; color: var(--muted); margin-top: 4px; }
+  .resp-card { margin: 6px 0; padding: 10px 14px; border-radius: 8px; font-size: 0.82rem; border-left: 4px solid; }
+  .resp-tier1 { background: rgba(255,71,87,0.1); border-color: var(--red); }
+  .resp-tier2 { background: rgba(255,165,2,0.1); border-color: var(--orange); }
+  .filter-btn { background: var(--bg); color: var(--text); border: 1px solid #2a2d3e;
+                 border-radius: 20px; padding: 4px 14px; cursor: pointer; font-size: 0.78rem;
+                 transition: all 0.2s; }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+  footer { text-align: center; padding: 18px; color: var(--muted); font-size: 0.76rem;
+            border-top: 1px solid #2a2d3e; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Multi-Source Surveillance Triangulation</h1>
+  <p>EpiHack · ADHS Wastewater · BioSense/NSSP ED Syndromic | Region: Arizona | 2026-05-21</p>
+  <div class="meta-bar">
+    <span class="meta-chip">User Story #9</span>
+    <span class="meta-chip">Recent window: 7d</span>
+    <span class="meta-chip">Baseline: 30d</span>
+    <span class="meta-chip">Ref date: 2026-05-21</span>
+    <span class="tier-chip tier-1">Tier 1 (all 3): 0</span>
+    <span class="tier-chip tier-2">Tier 2 (2 sources): 4</span>
+    <span class="tier-chip tier-3">Tier 3 (single): 2</span>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="ctrl-group">
+    <label>Tier filter:</label>
+    <button class="filter-btn active" onclick="setTierFilter('all')">All</button>
+    <button class="filter-btn" onclick="setTierFilter(1)">Tier 1</button>
+    <button class="filter-btn" onclick="setTierFilter(2)">Tier 2</button>
+    <button class="filter-btn" onclick="setTierFilter(3)">Tier 3</button>
+  </div>
+  <div class="ctrl-group">
+    <label>Sort by:</label>
+    <select onchange="setSortOrder(this.value)">
+      <option value="tier">Tier (priority)</option>
+      <option value="n_elevated">Sources elevated</option>
+      <option value="syndrome">Syndrome A–Z</option>
+    </select>
+  </div>
+  <div class="ctrl-group" style="margin-left:auto">
+    <span style="color:var(--muted);font-size:0.78rem;">
+      ▲ = ELEVATED &nbsp;&nbsp; · = within baseline &nbsp;&nbsp; N/A = no analogue
+    </span>
+  </div>
+</div>
+
+<div class="dashboard">
+
+  <!-- Panel A: Concordance Matrix -->
+  <div class="panel">
+    <h2>Panel A — Three-Source Concordance Matrix</h2>
+    <div class="canvas-wrap">
+      <canvas id="matrixChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Panel B: Tier Distribution -->
+  <div class="panel">
+    <h2>Panel B — Signal Confidence Tier Distribution</h2>
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="sc-val" style="color:var(--red)">0</div>
+        <div class="sc-lbl">Tier 1<br>Full Concordance</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-val" style="color:var(--orange)">4</div>
+        <div class="sc-lbl">Tier 2<br>Partial Concordance</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-val" style="color:var(--muted)">2</div>
+        <div class="sc-lbl">Tier 3<br>Single Source</div>
+      </div>
+      <div class="summary-card">
+        <div class="sc-val" style="color:var(--accent)">6</div>
+        <div class="sc-lbl">Syndromes<br>Evaluated</div>
+      </div>
+    </div>
+    <div class="canvas-wrap" style="height:220px">
+      <canvas id="tierChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Panel C: Wastewater -->
+  <div class="panel">
+    <h2>Panel C — ADHS Wastewater Pathogen Concentration <span style="color:var(--muted);font-size:0.75rem">(deterministic simulation)</span></h2>
+    <div class="canvas-wrap">
+      <canvas id="wwChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Panel D: ED Syndromic -->
+  <div class="panel">
+    <h2>Panel D — BioSense/NSSP ED Syndromic % Visits vs Alert Threshold <span style="color:var(--muted);font-size:0.75rem">(simulated)</span></h2>
+    <div class="canvas-wrap">
+      <canvas id="edChart"></canvas>
+    </div>
+  </div>
+
+  <!-- Panel E: Decision Table (full-width) -->
+  <div class="panel panel-full">
+    <h2>Panel E — Structured Decision Table</h2>
+    <div id="decision-table-container"></div>
+  </div>
+
+  <!-- Panel F: Response Recommendations -->
+  <div class="panel panel-full">
+    <h2>Panel F — Response Recommendations by Tier</h2>
+    <div id="response-recs"></div>
+  </div>
+
+  <!-- Panel G: Triangulation Narrative -->
+  <div class="panel panel-full">
+    <h2>Panel G — Surveillance Triangulation Narrative (LLM-generated)</h2>
+    <div class="narrative-box" id="narrative">MULTI-SOURCE SURVEILLANCE TRIANGULATION REPORT<br>Region: Arizona | Reference date: 2026-05-21 | Window: 7d recent<br>Generated: 2026-05-21 | Classification: ADHS INTERNAL — FOR OFFICIAL USE ONLY<br><br>——— EXECUTIVE SUMMARY ———<br><br>Triangulation of three independent surveillance streams — EpiHack participatory reporting,<br>ADHS wastewater surveillance, and BioSense/NSSP emergency department syndromic monitoring —<br>identified 4 syndrome(s) with cross-source concordance in Arizona over the<br>7-day reference window.<br><br>Alert status: ELEVATED<br>• Tier 1 (full concordance, all 3 sources): 0 syndrome(s) — none identified<br>• Tier 2 (partial concordance, 2 sources): 4 syndrome(s) — Respiratory — Influenza-Like Illness, Respiratory — COVID-Like Illness, Gastrointestinal Illness, Fever / Systemic Illness<br><br>——— PRIORITY SIGNAL ———<br><br>Syndrome: Respiratory — Influenza-Like Illness<br>Confidence Tier: 2<br>Concordance: Partial Concordance — Wastewater (ADHS) + ED Syndromic (NSSP)<br><br>Signal detail:<br>  EpiHack: baseline — -1.0pp vs 30d baseline, n=351 reporters<br>  Wastewater: concentration 40/100, trend falling, SIGNAL<br>  ED Syndromic: 2.54% of ED visits, trend falling, ABOVE THRESHOLD<br><br>Recommended response: ENHANCED SURVEILLANCE — Increase reporting frequency; notify county health departments; prepare situation report for ADHS weekly epidemiology call. Monitor third source.<br><br>——— METHODOLOGICAL NOTE ———<br><br>Multi-source triangulation substantially reduces false-positive risk inherent in any single<br>surveillance stream. EpiHack participatory data is subject to reporting biases (digital access,<br>health literacy, occupational determinants); wastewater surveillance provides population-level<br>pathogen exposure without behavioural reporting barriers; ED syndromic monitoring captures<br>care-seeking behaviour which may lag community infection by 3–7 days. Cross-source concordance<br>elevates signal credibility and warrants escalated public health response.<br><br>[NOTE: Wastewater and ED syndromic values are deterministic simulations calibrated to<br>Arizona-representative baselines. In production, replace with live ADHS BEACON and<br>BioSense/NSSP ESSENCE API feeds.]<br></div>
+  </div>
+
+  <!-- Panel H: LLM Prompt Template -->
+  <div class="panel panel-full">
+    <h2>Panel H — LLM Prompt Template (filled)</h2>
+    <div class="prompt-box">You are a multi-source surveillance triangulation analyst. Synthesize:<br><br>(1) EpiHack community signals:<br>No elevated signals in recent window<br><br>(2) ADHS Wastewater Surveillance trend for Arizona:<br>Influenza: conc=40/100, falling; Sars Cov2: conc=42/100, falling; Norovirus: conc=28/100, stable; Rsv: conc=36/100, stable<br><br>(3) BioSense/NSSP emergency department syndromic data:<br>ILI: 2.54% visits (ABOVE threshold), falling; CLI: 2.12% visits (ABOVE threshold), falling; GI: 1.58% visits (ABOVE threshold), falling; FEVER NOS: 1.73% visits (ABOVE threshold), stable; HEMORRHAGIC: 0.07% visits (ABOVE threshold), stable; RASH CONJUNCTIVITIS: 0.93% visits (ABOVE threshold), falling<br><br>Reference date: 2026-05-21 | Recent window: 7d | Region: Arizona<br><br>Tier 1 syndromes (all 3 concordant): None<br>Tier 2 syndromes (2 concordant): Respiratory — Influenza-Like Illness, Respiratory — COVID-Like Illness, Gastrointestinal Illness, Fever / Systemic Illness<br>Tier 3 syndromes (single source): High-Acuity / Hemorrhagic, Dermal / Ocular<br><br>For each syndrome with concordant signals across 2+ sources:<br>(1) Describe the concordance level in detail.<br>(2) Assign signal confidence tier (Tier 1: all 3 concordant; Tier 2: 2 concordant; Tier 3: single source).<br>(3) Recommend appropriate response level per tier.<br><br>Output as a structured decision table with columns:<br>Syndrome | Concordance Level | Confidence Tier | Recommended Response<br></div>
+  </div>
+
+</div>
+
+<footer>
+  EpiHack Participatory Epidemiological Surveillance Platform &nbsp;|&nbsp;
+  Arizona Department of Health Services (simulation) &nbsp;|&nbsp;
+  2026-05-21 &nbsp;|&nbsp;
+  User Story #9 — Multi-Source Surveillance Triangulation
+</footer>
+
+<script>
+// ── Embedded data ──────────────────────────────────────────────────────────
+const CONCORDANCE_DATA = [{"syndrome": "Respiratory \u2014 Influenza-Like Illness", "syndrome_key": "Respiratory-ILI", "color": "#1e90ff", "tier": 2, "n_elevated": 2, "n_sources_avail": 3, "concordance_level": "Partial Concordance \u2014 Wastewater (ADHS) + ED Syndromic (NSSP)", "epihack_signal": false, "epihack_class": "nc", "epihack_rate": 1.71, "epihack_delta": -0.96, "epihack_n": 351, "ww_available": true, "ww_signal": true, "ww_conc": 40.4, "ww_trend": "falling", "ed_available": true, "ed_signal": true, "ed_pct": 2.542, "ed_trend": "falling", "source_details": "EpiHack: NC (-1.0pp vs baseline, n=351, 3/28 postals elevated) | Wastewater: conc=40/100 (ELEVATED), trend=falling | ED Syndromic: 2.54% visits (ABOVE threshold=2.25%), trend=falling", "response_rec": "ENHANCED SURVEILLANCE \u2014 Increase reporting frequency; notify county health departments; prepare situation report for ADHS weekly epidemiology call. Monitor third source."}, {"syndrome": "Respiratory \u2014 COVID-Like Illness", "syndrome_key": "Respiratory-COVID", "color": "#00d2d3", "tier": 2, "n_elevated": 2, "n_sources_avail": 3, "concordance_level": "Partial Concordance \u2014 Wastewater (ADHS) + ED Syndromic (NSSP)", "epihack_signal": false, "epihack_class": "nc", "epihack_rate": 0.28, "epihack_delta": -0.59, "epihack_n": 351, "ww_available": true, "ww_signal": true, "ww_conc": 42.1, "ww_trend": "falling", "ed_available": true, "ed_signal": true, "ed_pct": 2.124, "ed_trend": "falling", "source_details": "EpiHack: NC (-0.6pp vs baseline, n=351, 1/28 postals elevated) | Wastewater: conc=42/100 (ELEVATED), trend=falling | ED Syndromic: 2.12% visits (ABOVE threshold=1.97%), trend=falling", "response_rec": "ENHANCED SURVEILLANCE \u2014 Increase reporting frequency; notify county health departments; prepare situation report for ADHS weekly epidemiology call. Monitor third source."}, {"syndrome": "Gastrointestinal Illness", "syndrome_key": "Gastrointestinal", "color": "#ffa502", "tier": 2, "n_elevated": 2, "n_sources_avail": 3, "concordance_level": "Partial Concordance \u2014 Wastewater (ADHS) + ED Syndromic (NSSP)", "epihack_signal": false, "epihack_class": "nc", "epihack_rate": 1.42, "epihack_delta": 0.18, "epihack_n": 351, "ww_available": true, "ww_signal": true, "ww_conc": 28.2, "ww_trend": "stable", "ed_available": true, "ed_signal": true, "ed_pct": 1.582, "ed_trend": "falling", "source_details": "EpiHack: NC (+0.2pp vs baseline, n=351, 2/28 postals elevated) | Wastewater: conc=28/100 (ELEVATED), trend=stable | ED Syndromic: 1.58% visits (ABOVE threshold=1.27%), trend=falling", "response_rec": "ENHANCED SURVEILLANCE \u2014 Increase reporting frequency; notify county health departments; prepare situation report for ADHS weekly epidemiology call. Monitor third source."}, {"syndrome": "Fever / Systemic Illness", "syndrome_key": "Fever-Systemic", "color": "#ff4757", "tier": 2, "n_elevated": 2, "n_sources_avail": 3, "concordance_level": "Partial Concordance \u2014 Wastewater (ADHS) + ED Syndromic (NSSP)", "epihack_signal": false, "epihack_class": "nc", "epihack_rate": 1.42, "epihack_delta": -0.93, "epihack_n": 351, "ww_available": true, "ww_signal": true, "ww_conc": 36.5, "ww_trend": "stable", "ed_available": true, "ed_signal": true, "ed_pct": 1.726, "ed_trend": "stable", "source_details": "EpiHack: NC (-0.9pp vs baseline, n=351, 2/28 postals elevated) | Wastewater: conc=36/100 (ELEVATED), trend=stable | ED Syndromic: 1.73% visits (ABOVE threshold=1.48%), trend=stable", "response_rec": "ENHANCED SURVEILLANCE \u2014 Increase reporting frequency; notify county health departments; prepare situation report for ADHS weekly epidemiology call. Monitor third source."}, {"syndrome": "High-Acuity / Hemorrhagic", "syndrome_key": "High-Acuity", "color": "#ff6b6b", "tier": 3, "n_elevated": 1, "n_sources_avail": 2, "concordance_level": "Single-Source Signal \u2014 ED Syndromic (NSSP) only", "epihack_signal": false, "epihack_class": "nc", "epihack_rate": 0.28, "epihack_delta": -0.27, "epihack_n": 351, "ww_available": false, "ww_signal": false, "ww_conc": null, "ww_trend": "N/A", "ed_available": true, "ed_signal": true, "ed_pct": 0.074, "ed_trend": "stable", "source_details": "EpiHack: NC (-0.3pp vs baseline, n=351, 1/28 postals elevated) | Wastewater: no analogue pathogen | ED Syndromic: 0.07% visits (ABOVE threshold=0.04%), trend=stable", "response_rec": "ROUTINE MONITORING \u2014 Maintain standard surveillance cadence; document signal for trend tracking; flag for next weekly review."}, {"syndrome": "Dermal / Ocular", "syndrome_key": "Dermal-Ocular", "color": "#43e97b", "tier": 3, "n_elevated": 1, "n_sources_avail": 2, "concordance_level": "Single-Source Signal \u2014 ED Syndromic (NSSP) only", "epihack_signal": false, "epihack_class": "nc", "epihack_rate": 0.57, "epihack_delta": -0.49, "epihack_n": 351, "ww_available": false, "ww_signal": false, "ww_conc": null, "ww_trend": "N/A", "ed_available": true, "ed_signal": true, "ed_pct": 0.93, "ed_trend": "falling", "source_details": "EpiHack: NC (-0.5pp vs baseline, n=351, 2/28 postals elevated) | Wastewater: no analogue pathogen | ED Syndromic: 0.93% visits (ABOVE threshold=0.63%), trend=falling", "response_rec": "ROUTINE MONITORING \u2014 Maintain standard surveillance cadence; document signal for trend tracking; flag for next weekly review."}];
+const WW_DATA = {"influenza": {"concentration": 40.4, "prior_concentration": 46.3, "trend": "falling", "signal": true}, "sars_cov2": {"concentration": 42.1, "prior_concentration": 49.6, "trend": "falling", "signal": true}, "norovirus": {"concentration": 28.2, "prior_concentration": 28.7, "trend": "stable", "signal": true}, "rsv": {"concentration": 36.5, "prior_concentration": 36.3, "trend": "stable", "signal": true}};
+const ED_DATA = {"ili": {"pct_visits": 2.542, "baseline_pct": 2.253, "above_threshold": true, "trend": "falling"}, "cli": {"pct_visits": 2.124, "baseline_pct": 1.971, "above_threshold": true, "trend": "falling"}, "gi": {"pct_visits": 1.582, "baseline_pct": 1.267, "above_threshold": true, "trend": "falling"}, "fever_nos": {"pct_visits": 1.726, "baseline_pct": 1.478, "above_threshold": true, "trend": "stable"}, "hemorrhagic": {"pct_visits": 0.074, "baseline_pct": 0.035, "above_threshold": true, "trend": "stable"}, "rash_conjunctivitis": {"pct_visits": 0.93, "baseline_pct": 0.634, "above_threshold": true, "trend": "falling"}};
+
+const BG      = "#0f1117";
+const SURFACE = "#1a1d27";
+const ACCENT  = "#6c63ff";
+const RED     = "#ff4757";
+const ORANGE  = "#ffa502";
+const GREEN   = "#43e97b";
+const BLUE    = "#1e90ff";
+const CYAN    = "#00d2d3";
+const TEXT    = "#e8eaf6";
+const MUTED   = "#8892a4";
+
+let activeTierFilter = "all";
+let activeSortOrder  = "tier";
+
+// ── Utility helpers ────────────────────────────────────────────────────────
+function tierColor(t) {
+  return t === 1 ? RED : t === 2 ? ORANGE : MUTED;
+}
+function tierClass(t) {
+  return `tier-${t}`;
+}
+function sigSymbol(val, avail) {
+  if (!avail) return '<span class="sig-na">N/A</span>';
+  return val
+    ? '<span class="sig-up">▲ ELEVATED</span>'
+    : '<span class="sig-ok">· baseline</span>';
+}
+
+function setTierFilter(tier) {
+  activeTierFilter = tier;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  event.target.classList.add("active");
+  renderDecisionTable();
+  renderResponseRecs();
+}
+
+function setSortOrder(val) {
+  activeSortOrder = val;
+  renderDecisionTable();
+}
+
+function filteredSorted() {
+  let data = [...CONCORDANCE_DATA];
+  if (activeTierFilter !== "all") {
+    data = data.filter(r => r.tier === Number(activeTierFilter));
+  }
+  data.sort((a, b) => {
+    if (activeSortOrder === "tier") return a.tier - b.tier || b.n_elevated - a.n_elevated;
+    if (activeSortOrder === "n_elevated") return b.n_elevated - a.n_elevated;
+    if (activeSortOrder === "syndrome") return a.syndrome.localeCompare(b.syndrome);
+    return 0;
+  });
+  return data;
+}
+
+// ── Panel A: Concordance Matrix (bar chart approximation) ─────────────────
+(function buildMatrixChart() {
+  const ctx   = document.getElementById("matrixChart").getContext("2d");
+  const synds = CONCORDANCE_DATA.map(r => r.syndrome.replace(" — ", " -
+"));
+  const ehVals = CONCORDANCE_DATA.map(r => r.epihack_signal ? 1 : 0);
+  const wwVals = CONCORDANCE_DATA.map(r => r.ww_available ? (r.ww_signal ? 1 : 0) : -1);
+  const edVals = CONCORDANCE_DATA.map(r => r.ed_available ? (r.ed_signal ? 1 : 0) : -1);
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: CONCORDANCE_DATA.map(r => r.syndrome.split(" — ")[0]),
+      datasets: [
+        {
+          label: "EpiHack",
+          data: ehVals,
+          backgroundColor: ehVals.map(v => v === 1 ? RED + "cc" : SURFACE),
+          borderColor: ehVals.map(v => v === 1 ? RED : MUTED),
+          borderWidth: 1,
+        },
+        {
+          label: "Wastewater",
+          data: wwVals.map(v => v < 0 ? 0 : v),
+          backgroundColor: wwVals.map(v => v === 1 ? CYAN + "cc" : v < 0 ? "#2a2d3e" : SURFACE),
+          borderColor: wwVals.map(v => v < 0 ? "#2a2d3e" : MUTED),
+          borderWidth: 1,
+        },
+        {
+          label: "ED Syndromic",
+          data: edVals.map(v => v < 0 ? 0 : v),
+          backgroundColor: edVals.map(v => v === 1 ? ORANGE + "cc" : v < 0 ? "#2a2d3e" : SURFACE),
+          borderColor: edVals.map(v => v < 0 ? "#2a2d3e" : MUTED),
+          borderWidth: 1,
+        },
+      ]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: TEXT, boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const r   = CONCORDANCE_DATA[ctx.dataIndex];
+              const src = ctx.dataset.label;
+              if (src === "EpiHack") {
+                return `EpiHack: ${r.epihack_class.toUpperCase()} (${r.epihack_delta >= 0 ? "+" : ""}${r.epihack_delta?.toFixed(1)}pp, n=${r.epihack_n})`;
+              } else if (src === "Wastewater") {
+                return r.ww_available
+                  ? `WW: conc=${r.ww_conc?.toFixed(0)}/100, ${r.ww_trend}, ${r.ww_signal ? "ELEVATED" : "baseline"}`
+                  : "Wastewater: no analogue";
+              } else {
+                return r.ed_available
+                  ? `ED: ${r.ed_pct?.toFixed(2)}%, ${r.ed_trend}, ${r.ed_signal ? "ABOVE THRESHOLD" : "within threshold"}`
+                  : "ED: no analogue";
+              }
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: 0, max: 1.2,
+          ticks: { color: TEXT, callback: v => v === 1 ? "ELEVATED" : v === 0 ? "baseline" : "" },
+          grid: { color: "#2a2d3e" },
+          title: { display: true, text: "Signal Status", color: MUTED }
+        },
+        y: {
+          ticks: { color: TEXT, font: { size: 10 } },
+          grid: { color: "#2a2d3e" }
+        }
+      }
+    }
+  });
+})();
+
+// ── Panel B: Tier Distribution Doughnut ────────────────────────────────────
+(function buildTierChart() {
+  const ctx = document.getElementById("tierChart").getContext("2d");
+  const counts = [1,2,3].map(t => CONCORDANCE_DATA.filter(r => r.tier === t).length);
+  new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels: ["Tier 1 — Full Concordance", "Tier 2 — Partial Concordance", "Tier 3 — Single Source"],
+      datasets: [{
+        data: counts,
+        backgroundColor: [RED + "bb", ORANGE + "bb", MUTED + "bb"],
+        borderColor:      [RED, ORANGE, MUTED],
+        borderWidth: 2,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      cutout: "60%",
+      plugins: {
+        legend: { position: "right", labels: { color: TEXT, boxWidth: 14, padding: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.raw} syndrome${c.raw !== 1 ? "s" : ""}` } }
+      }
+    }
+  });
+})();
+
+// ── Panel C: Wastewater Chart ──────────────────────────────────────────────
+(function buildWWChart() {
+  const ctx  = document.getElementById("wwChart").getContext("2d");
+  const keys = Object.keys(WW_DATA);
+  const lbls = keys.map(k => k.replace("sars_cov2","SARS-CoV-2").replace(/_/g," ").replace(/\w/g,c=>c.toUpperCase()));
+  const curr = keys.map(k => WW_DATA[k].concentration);
+  const prior= keys.map(k => WW_DATA[k].prior_concentration);
+  const clrs = keys.map(k => WW_DATA[k].signal ? RED + "cc" : BLUE + "cc");
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: lbls,
+      datasets: [
+        { label: "Prior month", data: prior, backgroundColor: "#3a3d4ecc", borderColor: MUTED, borderWidth: 1 },
+        { label: "Current",     data: curr,  backgroundColor: clrs, borderColor: keys.map(k => WW_DATA[k].signal ? RED : BLUE), borderWidth: 1 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend:    { labels: { color: TEXT, boxWidth: 12 } },
+        annotation: {
+          annotations: { threshold: { type: "line", yMin: 30, yMax: 30, borderColor: ORANGE, borderWidth: 2, borderDash: [5,3], label: { content: "Threshold 30", display: true, color: ORANGE } } }
+        }
+      },
+      scales: {
+        x: { ticks: { color: TEXT }, grid: { color: "#2a2d3e" } },
+        y: {
+          min: 0, max: 80,
+          ticks: { color: TEXT },
+          grid: { color: "#2a2d3e" },
+          title: { display: true, text: "Relative Concentration (0–100)", color: MUTED }
+        }
+      }
+    }
+  });
+})();
+
+// ── Panel D: ED Syndromic Chart ────────────────────────────────────────────
+(function buildEDChart() {
+  const ctx  = document.getElementById("edChart").getContext("2d");
+  const keys = Object.keys(ED_DATA);
+  const lbls = keys.map(k => k.toUpperCase().replace(/_/g," "));
+  const pcts = keys.map(k => ED_DATA[k].pct_visits);
+  const thrs = keys.map(k => ED_DATA[k].baseline_pct);
+  const clrs = keys.map(k => ED_DATA[k].above_threshold ? RED + "cc" : BLUE + "cc");
+
+  new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: lbls,
+      datasets: [
+        { label: "% ED Visits", data: pcts, backgroundColor: clrs,
+           borderColor: keys.map(k => ED_DATA[k].above_threshold ? RED : BLUE), borderWidth: 1 },
+        { label: "Alert Threshold", data: thrs, type: "line",
+           borderColor: ORANGE, borderWidth: 2, borderDash: [5,3],
+           pointStyle: "dash", pointRadius: 0, fill: false, backgroundColor: "transparent" },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: TEXT, boxWidth: 12 } } },
+      scales: {
+        x: { ticks: { color: TEXT, font: { size: 10 } }, grid: { color: "#2a2d3e" } },
+        y: {
+          ticks: { color: TEXT, callback: v => v.toFixed(1) + "%" },
+          grid:  { color: "#2a2d3e" },
+          title: { display: true, text: "% of Total ED Visits", color: MUTED }
+        }
+      }
+    }
+  });
+})();
+
+// ── Panel E: Decision Table ────────────────────────────────────────────────
+function renderDecisionTable() {
+  const data = filteredSorted();
+  const container = document.getElementById("decision-table-container");
+
+  if (data.length === 0) {
+    container.innerHTML = "<p style='color:var(--muted);text-align:center;padding:20px'>No syndromes match current filter.</p>";
+    return;
+  }
+
+  let html = `<table>
+    <thead><tr>
+      <th onclick="cycleSort('syndrome')">Syndrome ↕</th>
+      <th onclick="cycleSort('tier')">Tier ↕</th>
+      <th>Sources ▲/Avail</th>
+      <th>EpiHack Signal</th>
+      <th>Wastewater</th>
+      <th>ED Syndromic</th>
+      <th>Concordance Level</th>
+    </tr></thead>
+    <tbody>`;
+
+  data.forEach(r => {
+    const tierBadge = `<span class="badge ${tierClass(r.tier)}" style="background:${tierColor(r.tier)}22;color:${tierColor(r.tier)};border:1px solid ${tierColor(r.tier)}">TIER ${r.tier}</span>`;
+    const ehDetail = r.epihack_class === "indef"
+      ? `<span style="color:var(--muted)">INDEF (n=${r.epihack_n})</span>`
+      : `<span class="${r.epihack_signal ? "sig-up" : "sig-ok"}">${r.epihack_class.toUpperCase()} (${r.epihack_delta >= 0 ? "+" : ""}${r.epihack_delta?.toFixed(1)}pp)</span>`;
+    const wwDetail = r.ww_available
+      ? `${r.ww_signal ? '<span class="sig-up">▲ ' : '<span class="sig-ok">· '}${r.ww_conc?.toFixed(0)}/100 ${r.ww_trend}</span>`
+      : '<span class="sig-na">N/A</span>';
+    const edDetail = r.ed_available
+      ? `${r.ed_signal ? '<span class="sig-up">▲ ' : '<span class="sig-ok">· '}${r.ed_pct?.toFixed(2)}% ${r.ed_trend}</span>`
+      : '<span class="sig-na">N/A</span>';
+
+    html += `<tr>
+      <td style="font-weight:600;color:${r.color || TEXT}">${r.syndrome}</td>
+      <td>${tierBadge}</td>
+      <td style="text-align:center;font-weight:700;color:${tierColor(r.tier)}">${r.n_elevated} / ${r.n_sources_avail}</td>
+      <td>${ehDetail}</td>
+      <td>${wwDetail}</td>
+      <td>${edDetail}</td>
+      <td style="font-size:0.78rem;color:var(--muted)">${r.concordance_level}</td>
+    </tr>`;
+  });
+
+  html += "</tbody></table>";
+  container.innerHTML = html;
+}
+
+function cycleSort(field) {
+  activeSortOrder = field;
+  renderDecisionTable();
+}
+
+// ── Panel F: Response Recommendations ─────────────────────────────────────
+function renderResponseRecs() {
+  const data = filteredSorted().filter(r => r.tier <= 2);
+  const container = document.getElementById("response-recs");
+
+  if (data.length === 0) {
+    container.innerHTML = "<p style='color:var(--muted)'>No Tier 1 or Tier 2 syndromes match current filter.</p>";
+    return;
+  }
+
+  let html = "";
+  data.forEach(r => {
+    const cls = r.tier === 1 ? "resp-tier1" : "resp-tier2";
+    html += `<div class="resp-card ${cls}">
+      <strong style="color:${tierColor(r.tier)}">[TIER ${r.tier}] ${r.syndrome}</strong><br>
+      <span style="color:var(--muted);font-size:0.78rem">${r.concordance_level}</span><br>
+      <span style="margin-top:6px;display:block">${r.response_rec}</span>
+    </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+// ── Initial render ─────────────────────────────────────────────────────────
+renderDecisionTable();
+renderResponseRecs();
+</script>
+</body>
+</html>
