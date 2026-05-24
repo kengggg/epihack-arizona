@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Demographic Surveillance Analysis — Arizona</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --accent:#6c63ff;
+    --red:#ff4757; --orange:#ffa502; --green:#43e97b;
+    --blue:#1e90ff; --cyan:#00d2d3; --pink:#ff6b9d;
+    --text:#e8eaf6; --muted:#8892a4;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  header{background:var(--surface);border-bottom:2px solid var(--accent);padding:18px 28px}
+  header h1{font-size:1.5rem;color:var(--accent)}
+  header p{color:var(--muted);font-size:.85rem;margin-top:4px}
+  .meta-bar{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+  .chip{background:rgba(108,99,255,.15);border:1px solid var(--accent);border-radius:20px;padding:4px 14px;font-size:.78rem;color:var(--accent)}
+  .chip-red{background:rgba(255,71,87,.2);border-color:var(--red);color:var(--red)}
+  .chip-orange{background:rgba(255,165,2,.2);border-color:var(--orange);color:var(--orange)}
+  .chip-green{background:rgba(67,233,123,.2);border-color:var(--green);color:var(--green)}
+  .controls{background:var(--surface);border-bottom:1px solid #2a2d3e;padding:14px 28px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+  .ctrl{display:flex;align-items:center;gap:8px}
+  .ctrl label{color:var(--muted);font-size:.82rem}
+  .ctrl select,.ctrl input[type=range]{background:var(--bg);color:var(--text);border:1px solid var(--accent);border-radius:6px;padding:4px 8px;font-size:.82rem}
+  .ctrl span{color:var(--accent);font-weight:700;min-width:40px}
+  .dashboard{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 28px}
+  .panel{background:var(--surface);border-radius:10px;padding:20px;border:1px solid #2a2d3e}
+  .panel-full{grid-column:1/-1}
+  .panel h2{font-size:.95rem;color:var(--accent);margin-bottom:14px;font-weight:600}
+  .canvas-wrap{position:relative;height:300px}
+  .heatmap-grid{display:grid;gap:4px;margin-top:8px}
+  .hm-cell{border-radius:6px;padding:8px 4px;text-align:center;font-size:.75rem;font-weight:700;cursor:default;transition:transform .15s}
+  .hm-cell:hover{transform:scale(1.05);z-index:10;position:relative}
+  table{width:100%;border-collapse:collapse;font-size:.81rem;margin-top:8px}
+  thead th{background:rgba(108,99,255,.15);color:var(--accent);padding:8px 10px;text-align:left;border-bottom:2px solid var(--accent);cursor:pointer;white-space:nowrap}
+  thead th:hover{background:rgba(108,99,255,.25)}
+  tbody tr{border-bottom:1px solid #2a2d3e;transition:background .15s}
+  tbody tr:hover{background:rgba(108,99,255,.07)}
+  tbody td{padding:7px 10px;vertical-align:top}
+  .badge{display:inline-block;border-radius:12px;padding:2px 10px;font-size:.73rem;font-weight:700}
+  .sig-true{background:rgba(255,71,87,.2);color:var(--red);border:1px solid var(--red)}
+  .sig-artifact{background:rgba(67,233,123,.2);color:var(--green);border:1px solid var(--green)}
+  .sig-uncertain{background:rgba(255,165,2,.2);color:var(--orange);border:1px solid var(--orange)}
+  .flag-r{background:rgba(255,71,87,.15);color:var(--red);border-radius:4px;padding:1px 6px;font-size:.72rem}
+  .flag-s{background:rgba(255,165,2,.15);color:var(--orange);border-radius:4px;padding:1px 6px;font-size:.72rem}
+  .narrative-box{background:var(--bg);border:1px solid #2a2d3e;border-radius:8px;padding:18px;font-size:.83rem;line-height:1.75;font-family:'Courier New',monospace;max-height:500px;overflow-y:auto}
+  .prompt-box{background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:14px;font-size:.77rem;line-height:1.6;color:var(--muted);max-height:300px;overflow-y:auto}
+  .summary-cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .sc{flex:1;min-width:120px;background:var(--bg);border-radius:8px;padding:14px 12px;border:1px solid #2a2d3e;text-align:center}
+  .sc-val{font-size:2rem;font-weight:800}
+  .sc-lbl{font-size:.76rem;color:var(--muted);margin-top:4px}
+  .filter-btn{background:var(--bg);color:var(--text);border:1px solid #2a2d3e;border-radius:20px;padding:4px 14px;cursor:pointer;font-size:.78rem;transition:all .2s}
+  .filter-btn.active{background:var(--accent);border-color:var(--accent);color:white}
+  footer{text-align:center;padding:16px;color:var(--muted);font-size:.75rem;border-top:1px solid #2a2d3e}
+</style>
+</head>
+<body>
+<header>
+  <h1>Demographic Surveillance Analysis — Arizona</h1>
+  <p>Age × Sex stratification | EpiHack Participatory Surveillance | 2026-05-21</p>
+  <div class="meta-bar">
+    <span class="chip">User Story #10</span>
+    <span class="chip">Recent: 7d (n=351)</span>
+    <span class="chip">Baseline: 30d (n=2169)</span>
+    <span class="chip-red">Rate flags: 10</span>
+    <span class="chip-orange">Share shifts: 0</span>
+    <span class="chip-red">High-acuity: 2</span>
+    <span class="chip-green">True signals: 7</span>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="ctrl">
+    <label>Rate threshold:</label>
+    <input type="range" id="rateThresh" min="5" max="100" step="5" value="20"
+           oninput="document.getElementById('rateVal').textContent=this.value+'%';filterTable()">
+    <span id="rateVal">20%</span>
+  </div>
+  <div class="ctrl">
+    <label>Share threshold:</label>
+    <input type="range" id="shareThresh" min="2" max="30" step="1" value="10"
+           oninput="document.getElementById('shareVal').textContent=this.value+'pp';filterTable()">
+    <span id="shareVal">10pp</span>
+  </div>
+  <div class="ctrl">
+    <label>Sex:</label>
+    <select id="sexFilter" onchange="filterTable(); updatePrevalenceChart()">
+      <option value="all">All</option>
+      <option value="Female">Female</option>
+      <option value="Male">Male</option>
+      <option value="Other/Unknown">Other/Unknown</option>
+    </select>
+  </div>
+  <div class="ctrl">
+    <label>Symptom:</label>
+    <select id="symFilter" onchange="filterTable(); updatePrevalenceChart()">
+      <option value="all">All symptoms</option>
+    </select>
+  </div>
+  <div class="ctrl" style="margin-left:auto">
+    <button class="filter-btn active" onclick="setAssessFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setAssessFilter('TRUE',this)">True Signals</button>
+    <button class="filter-btn" onclick="setAssessFilter('ARTIFACT',this)">Artifacts</button>
+    <button class="filter-btn" onclick="setAssessFilter('UNCERTAIN',this)">Uncertain</button>
+  </div>
+</div>
+
+<div class="dashboard">
+
+  <!-- Summary Cards -->
+  <div class="panel panel-full">
+    <div class="summary-cards">
+      <div class="sc"><div class="sc-val" style="color:var(--accent)">10</div><div class="sc-lbl">Flagged<br>Stratum×Symptoms</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--red)">10</div><div class="sc-lbl">Rate Increase<br>Signals</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--orange)">0</div><div class="sc-lbl">Reporter-Share<br>Shifts</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--red)">2</div><div class="sc-lbl">High-Acuity<br>Elevations</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--red)">7</div><div class="sc-lbl">Likely True<br>Signals</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--green)">0</div><div class="sc-lbl">Likely<br>Artifacts</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--orange)">351</div><div class="sc-lbl">Recent<br>Reporters</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--muted)">2169</div><div class="sc-lbl">Baseline<br>Reporters</div></div>
+    </div>
+  </div>
+
+  <!-- Panel A: Reporter Share Chart -->
+  <div class="panel">
+    <h2>Panel A — Reporter Share by Age Band</h2>
+    <div class="canvas-wrap"><canvas id="shareChart"></canvas></div>
+  </div>
+
+  <!-- Panel B: Heatmap -->
+  <div class="panel">
+    <h2>Panel B — Max Relative Rate Increase Heatmap (Age × Sex)</h2>
+    <div id="heatmapGrid"></div>
+  </div>
+
+  <!-- Panel C: Prevalence by Age Band -->
+  <div class="panel">
+    <h2>Panel C — Symptom Prevalence by Age Band <span style="color:var(--muted);font-size:.75rem">(recent window)</span></h2>
+    <div class="canvas-wrap"><canvas id="prevalenceChart"></canvas></div>
+  </div>
+
+  <!-- Panel D: Sex-Stratified Flagged Signals -->
+  <div class="panel">
+    <h2>Panel D — Baseline vs Recent: Top Flagged Strata</h2>
+    <div class="canvas-wrap"><canvas id="sigChart"></canvas></div>
+  </div>
+
+  <!-- Panel E: Flagged Signal Table -->
+  <div class="panel panel-full">
+    <h2>Panel E — Flagged Strata Decision Table <span id="flagCount" style="color:var(--muted);font-size:.82rem"></span></h2>
+    <div id="flagTableContainer"></div>
+  </div>
+
+  <!-- Panel F: Narrative -->
+  <div class="panel panel-full">
+    <h2>Panel F — Demographic Surveillance Narrative (LLM-generated)</h2>
+    <div class="narrative-box">DEMOGRAPHIC SURVEILLANCE ANALYSIS REPORT<br>Region: Arizona | Reference: 2026-05-21 | Window: 7d recent / 30d baseline<br>Total reporters: 351 (recent) vs 2169 (baseline)<br>Generated: 2026-05-21 | Classification: ADHS INTERNAL<br><br>——— EXECUTIVE SUMMARY ———<br><br>Stratified analysis of all 14 EpiHack symptom columns across 5 age bands<br>(Pediatric through Senior) and 3 sex categories identified:<br><br>  • 10 stratum×symptom combinations with rate increase >20.0% relative to 30d baseline<br>  • 0 strata with reporter-share shift >10.0pp between windows<br>  • 2 high-acuity symptom elevations<br>  • 7 assessed as LIKELY TRUE SIGNAL<br>  • 0 assessed as LIKELY REPORTING ARTIFACT<br>  • 3 assessed as UNCERTAIN — requires validation<br><br>——— SECTION 1: RATE INCREASE SIGNALS (>20.0% relative) ———<br><br>[1] Pediatric (0–17) × Female — Diarrhea<br>    Baseline: 0.6% | Recent: 10.0% | Relative increase: +1640.0%<br>    Reporters: n=20 (recent), n=174 (baseline)<br>    Assessment: UNCERTAIN — REQUIRES VALIDATION<br>    Action: Monitor Diarrhea in Pediatric (0–17) Female over next 7 days. Collect additional data to distinguish true signal from random variation. Small sample (n=20) limits confidence. Low baseline rate (<2%) may produce floor-effect artefacts. Cross-validate with wastewater and ED syndromic streams (see US#9).<br><br>[2] Pediatric (0–17) × Female — Red Eyes<br>    Baseline: 0.6% | Recent: 5.0% | Relative increase: +770.0%<br>    Reporters: n=20 (recent), n=174 (baseline)<br>    Assessment: UNCERTAIN — REQUIRES VALIDATION<br>    Action: Monitor Red Eyes in Pediatric (0–17) Female over next 7 days. Collect additional data to distinguish true signal from random variation. Small sample (n=20) limits confidence. Low baseline rate (<2%) may produce floor-effect artefacts. Cross-validate with wastewater and ED syndromic streams (see US#9).<br><br>[3] Pediatric (0–17) × Female — Muscle Aches<br>    Baseline: 1.7% | Recent: 5.0% | Relative increase: +190.0%<br>    Reporters: n=20 (recent), n=174 (baseline)<br>    Assessment: UNCERTAIN — REQUIRES VALIDATION<br>    Action: Monitor Muscle Aches in Pediatric (0–17) Female over next 7 days. Collect additional data to distinguish true signal from random variation. Small sample (n=20) limits confidence. Low baseline rate (<2%) may produce floor-effect artefacts. Cross-validate with wastewater and ED syndromic streams (see US#9).<br><br>[4] Young Adult (18–34) × Female — Difficulty Breathing<br>    Baseline: 0.4% | Recent: 0.9% | Relative increase: +105.1%<br>    Reporters: n=112 (recent), n=689 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: [HIGH PRIORITY] Investigate Difficulty Breathing elevation in Young Adult (18–34) Female — high-acuity symptom with syndromic co-elevation. Alert county health departments; consider active case-finding; review ED and hospital discharge data for this demographic.<br><br>[5] Young Adult (18–34) × Female — Muscle Aches<br>    Baseline: 0.4% | Recent: 0.9% | Relative increase: +105.1%<br>    Reporters: n=112 (recent), n=689 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: Increase surveillance frequency for Young Adult (18–34) Female. Prepare targeted public health messaging. Notify primary care providers in high-reporter postal codes.<br><br>[6] Young Adult (18–34) × Male — Nausea/Vomiting<br>    Baseline: 1.0% | Recent: 1.9% | Relative increase: +80.2%<br>    Reporters: n=54 (recent), n=292 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: Investigate sex-differentiated Nausea/Vomiting pattern in Young Adult (18–34). Assess occupational exposure, healthcare-seeking behaviour, and biological susceptibility differences. Cross-reference with occupational health databases.<br><br>[7] Young Adult (18–34) × Male — Discolored/Bloody Urine<br>    Baseline: 1.0% | Recent: 1.9% | Relative increase: +80.2%<br>    Reporters: n=54 (recent), n=292 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: [HIGH PRIORITY] Investigate Discolored/Bloody Urine elevation in Young Adult (18–34) Male — high-acuity symptom with syndromic co-elevation. Alert county health departments; consider active case-finding; review ED and hospital discharge data for this demographic.<br><br>[8] Young Adult (18–34) × Female — Fever<br>    Baseline: 0.6% | Recent: 0.9% | Relative increase: +53.8%<br>    Reporters: n=112 (recent), n=689 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: Investigate sex-differentiated Fever pattern in Young Adult (18–34). Assess occupational exposure, healthcare-seeking behaviour, and biological susceptibility differences. Cross-reference with occupational health databases.<br><br>[9] Young Adult (18–34) × Male — Muscle Aches<br>    Baseline: 1.4% | Recent: 1.9% | Relative increase: +35.2%<br>    Reporters: n=54 (recent), n=292 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: Increase surveillance frequency for Young Adult (18–34) Male. Prepare targeted public health messaging. Notify primary care providers in high-reporter postal codes.<br><br>[10] Young Adult (18–34) × Female — Sore Throat<br>    Baseline: 1.5% | Recent: 1.8% | Relative increase: +23.0%<br>    Reporters: n=112 (recent), n=689 (baseline)<br>    Assessment: LIKELY TRUE SIGNAL<br>    Action: Investigate sex-differentiated Sore Throat pattern in Young Adult (18–34). Assess occupational exposure, healthcare-seeking behaviour, and biological susceptibility differences. Cross-reference with occupational health databases.<br><br>——— SECTION 2: REPORTER-SHARE SHIFTS (>10.0pp) ———<br><br>No strata exceeded the reporter-share shift threshold.<br><br>——— SECTION 3: HIGH-ACUITY SIGNALS ———<br>  [ALERT] Difficulty Breathing in Young Adult (18–34) × Female: +105.1% relative increase (n=112). Assessment: LIKELY TRUE SIGNAL. [HIGH PRIORITY] Investigate Difficulty Breathing elevation in Young Adult (18–34) Female — high-acuity symptom with syndromic co-elevation. Alert county health departments; consider active case-finding; review ED and hospital discharge data for this demographic.<br>  [ALERT] Discolored/Bloody Urine in Young Adult (18–34) × Male: +80.2% relative increase (n=54). Assessment: LIKELY TRUE SIGNAL. [HIGH PRIORITY] Investigate Discolored/Bloody Urine elevation in Young Adult (18–34) Male — high-acuity symptom with syndromic co-elevation. Alert county health departments; consider active case-finding; review ED and hospital discharge data for this demographic.<br><br>——— SECTION 4: RECOMMENDED ACTIONS MATRIX ———<br><br>Priority | Stratum                         | Signal              | Action<br>----------------------------------------------------------------------------------------------------<br>HIGH     | Young Adult (18–34)  × Female     | Difficulty Breathing | [HIGH PRIORITY] Investigate Difficulty Breathing elevation in Young Ad…<br>HIGH     | Young Adult (18–34)  × Female     | Muscle Aches         | Increase surveillance frequency for Young Adult (18–34) Female. Prepar…<br>HIGH     | Young Adult (18–34)  × Male       | Nausea/Vomiting      | Investigate sex-differentiated Nausea/Vomiting pattern in Young Adult …<br>HIGH     | Young Adult (18–34)  × Male       | Discolored/Bloody Urine | [HIGH PRIORITY] Investigate Discolored/Bloody Urine elevation in Young…<br>HIGH     | Young Adult (18–34)  × Female     | Fever                | Investigate sex-differentiated Fever pattern in Young Adult (18–34). A…<br>HIGH     | Young Adult (18–34)  × Male       | Muscle Aches         | Increase surveillance frequency for Young Adult (18–34) Male. Prepare …<br>HIGH     | Young Adult (18–34)  × Female     | Sore Throat          | Investigate sex-differentiated Sore Throat pattern in Young Adult (18–…<br>MEDIUM   | Pediatric (0–17)     × Female     | Diarrhea             | Monitor Diarrhea in Pediatric (0–17) Female over next 7 days. Collect …<br>MEDIUM   | Pediatric (0–17)     × Female     | Red Eyes             | Monitor Red Eyes in Pediatric (0–17) Female over next 7 days. Collect …<br>MEDIUM   | Pediatric (0–17)     × Female     | Muscle Aches         | Monitor Muscle Aches in Pediatric (0–17) Female over next 7 days. Coll…<br><br>——— METHODOLOGICAL NOTE ———<br><br>Relative rate increases (%), not absolute percentage-point differences, are used as the<br>primary detection criterion. This avoids suppressing signals in low-prevalence symptoms<br>where a 2pp increase may represent a 100% relative rise. Reporter-share shifts are evaluated<br>at the stratum level — a 10pp shift in a stratum's proportion of total reporters typically<br>indicates participation change (recruitment artifact) rather than a genuine burden change,<br>unless corroborated by stable raw counts and elevated symptom rates.<br><br>Sparse strata (n<10 reporters in either window) are excluded from signal detection to<br>prevent floor-effect artifacts. All signals flagged as UNCERTAIN should be cross-validated<br>against wastewater surveillance (ADHS BEACON) and ED syndromic data (BioSense/NSSP ESSENCE)<br>as described in User Story #9 triangulation methodology.<br><br>[NOTE: EpiHack participatory surveillance is subject to digital-access bias: Pediatric<br>reporters are typically proxy-reported by parents/guardians; Senior strata may be<br>structurally under-represented due to lower digital literacy. Demographic shifts in<br>reporter composition should always be evaluated as potential participation artifacts before<br>public health escalation.]<br></div>
+  </div>
+
+  <!-- Panel G: LLM Prompt -->
+  <div class="panel panel-full">
+    <h2>Panel G — LLM Prompt Template (filled)</h2>
+    <div class="prompt-box">You are a demographic surveillance analyst. Compare symptom prevalence by age group and sex for the current 7-day window vs. the prior 30-day baseline:<br><br>Age Band                  Sex             Symptom                       Baseline%    Recent%  Rel.Increase%  Share Shift pp<br>------------------------------------------------------------------------------------------------------------------------<br>Pediatric (0–17)          Female          Diarrhea                           0.6%      10.0%       +1640.0%          -2.3pp<br>Pediatric (0–17)          Female          Red Eyes                           0.6%       5.0%        +770.0%          -2.3pp<br>Pediatric (0–17)          Female          Muscle Aches                       1.7%       5.0%        +190.0%          -2.3pp<br>Young Adult (18–34)       Female          Difficulty Breathing               0.4%       0.9%        +105.1%          +0.1pp<br>Young Adult (18–34)       Female          Muscle Aches                       0.4%       0.9%        +105.1%          +0.1pp<br>Young Adult (18–34)       Male            Nausea/Vomiting                    1.0%       1.9%         +80.2%          +1.9pp<br>Young Adult (18–34)       Male            Discolored/Bloody Urine            1.0%       1.9%         +80.2%          +1.9pp<br>Young Adult (18–34)       Female          Fever                              0.6%       0.9%         +53.8%          +0.1pp<br>Young Adult (18–34)       Male            Muscle Aches                       1.4%       1.9%         +35.2%          +1.9pp<br>Young Adult (18–34)       Female          Sore Throat                        1.5%       1.8%         +23.0%          +0.1pp<br><br>Reference date: 2026-05-21 | Region: Arizona<br>Detection thresholds: rate increase >20.0% relative | reporter-share shift >10.0pp<br><br>Identify any age×sex strata where:<br>(1) symptom rates have increased by >20.0% relative to baseline;<br>(2) the stratum's share of total reporters has shifted by >10.0 percentage points.<br><br>For each identified shift:<br>- Describe the demographic pattern in epidemiological terms.<br>- Assess whether it likely reflects a TRUE EPIDEMIOLOGICAL SIGNAL or a REPORTING ARTIFACT.<br>- Recommend appropriate follow-up actions (public health response, data quality improvement, or further investigation).<br><br>Structure your output as:<br>SECTION 1: Strata with Rate Increases >20.0% (sorted by relative increase)<br>SECTION 2: Strata with Reporter-Share Shifts >10.0pp<br>SECTION 3: High-Acuity Signals (if any)<br>SECTION 4: Recommended Actions Matrix (stratum | signal type | priority | action)<br></div>
+  </div>
+
+</div>
+<footer>
+  EpiHack Participatory Epidemiological Surveillance Platform &nbsp;|&nbsp;
+  Arizona ADHS · User Story #10 — Demographic Surveillance Analysis &nbsp;|&nbsp; 2026-05-21
+</footer>
+
+<script>
+// ── Embedded data ──────────────────────────────────────────────────────────
+const SHARE_DATA     = {"Pediatric (0\u201317)": {"rec_share": 7.69, "bas_share": 10.69}, "Young Adult (18\u201334)": {"rec_share": 47.29, "bas_share": 45.230000000000004}, "Middle Adult (35\u201354)": {"rec_share": 35.33, "bas_share": 37.39}, "Pre-Senior (55\u201364)": {"rec_share": 5.98, "bas_share": 5.07}, "Senior (65+)": {"rec_share": 3.7, "bas_share": 1.6099999999999999}};
+const PREVALENCE_DATA= {"cough_congestion": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 3.448, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 8.621, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.893, "bas_rate": 1.887, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 2.055, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.602, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 1.887, "bas_rate": 1.597, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 4.167, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 3.226, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 3.846, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "sore_throat": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 3.448, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 3.448, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 1.786, "bas_rate": 1.451, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 2.055, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.602, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 1.887, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 2.083, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 1.613, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 3.846, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "difficulty_breathing": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 1.149, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 1.724, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.893, "bas_rate": 0.435, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 1.712, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.803, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.319, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 1.613, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "nauseas_vomiting": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 2.874, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 3.448, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 0.581, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 1.027, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "diarrhea": {"Pediatric (0\u201317)||Female": {"rec_rate": 10.0, "bas_rate": 0.575, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 14.286, "bas_rate": 3.448, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 1.016, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 2.055, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.402, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "muscle_or_body_aches_and_pains": {"Pediatric (0\u201317)||Female": {"rec_rate": 5.0, "bas_rate": 1.724, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 6.897, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.893, "bas_rate": 0.435, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 1.37, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.402, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.319, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 2.083, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 1.613, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 3.846, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "fever": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 2.874, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 3.448, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.893, "bas_rate": 0.581, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 2.397, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.402, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.319, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 4.167, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 3.226, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 3.846, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "chills": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 1.149, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 1.724, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.893, "bas_rate": 1.306, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 2.055, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.602, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.639, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 2.083, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 1.613, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "red_eyes": {"Pediatric (0\u201317)||Female": {"rec_rate": 5.0, "bas_rate": 0.575, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 1.724, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 0.29, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 0.342, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "rash": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 1.149, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 3.448, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.893, "bas_rate": 1.161, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 1.027, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.402, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 4.167, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 3.846, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "loss_of_smell_or_taste": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 0.29, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "bleeding_from_body_openings": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 0.342, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.201, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "yellow_skin_yellow_eyes": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}, "discolored_or_bloody_urine": {"Pediatric (0\u201317)||Female": {"rec_rate": 0.0, "bas_rate": 1.149, "rec_n": 20, "sparse": false}, "Pediatric (0\u201317)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 7, "sparse": true}, "Pediatric (0\u201317)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Young Adult (18\u201334)||Female": {"rec_rate": 0.0, "bas_rate": 0.581, "rec_n": 112, "sparse": false}, "Young Adult (18\u201334)||Male": {"rec_rate": 1.852, "bas_rate": 1.027, "rec_n": 54, "sparse": false}, "Young Adult (18\u201334)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Middle Adult (35\u201354)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 71, "sparse": false}, "Middle Adult (35\u201354)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 53, "sparse": false}, "Middle Adult (35\u201354)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Pre-Senior (55\u201364)||Female": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 11, "sparse": false}, "Pre-Senior (55\u201364)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 10, "sparse": false}, "Pre-Senior (55\u201364)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}, "Senior (65+)||Female": {"rec_rate": 0.0, "bas_rate": 11.111, "rec_n": 4, "sparse": true}, "Senior (65+)||Male": {"rec_rate": 0.0, "bas_rate": 0.0, "rec_n": 9, "sparse": true}, "Senior (65+)||Other/Unknown": {"rec_rate": null, "bas_rate": null, "rec_n": 0, "sparse": true}}};
+const HEATMAP_DATA   = {"Pediatric (0\u201317)||Female": {"rel_increase": 1640.0, "symptom": "Diarrhea", "rec_rate": 10.0, "bas_rate": 0.575, "assessment": "UNCERTAIN \u2014 REQUIRES VALIDATION"}, "Pediatric (0\u201317)||Male": null, "Pediatric (0\u201317)||Other/Unknown": null, "Young Adult (18\u201334)||Female": {"rel_increase": 105.06, "symptom": "Difficulty Breathing", "rec_rate": 0.893, "bas_rate": 0.435, "assessment": "LIKELY TRUE SIGNAL"}, "Young Adult (18\u201334)||Male": {"rel_increase": 80.25, "symptom": "Nausea/Vomiting", "rec_rate": 1.852, "bas_rate": 1.027, "assessment": "LIKELY TRUE SIGNAL"}, "Young Adult (18\u201334)||Other/Unknown": null, "Middle Adult (35\u201354)||Female": null, "Middle Adult (35\u201354)||Male": null, "Middle Adult (35\u201354)||Other/Unknown": null, "Pre-Senior (55\u201364)||Female": null, "Pre-Senior (55\u201364)||Male": null, "Pre-Senior (55\u201364)||Other/Unknown": null, "Senior (65+)||Female": null, "Senior (65+)||Male": null, "Senior (65+)||Other/Unknown": null};
+const FLAGGED_DATA   = [{"age_band": "Pediatric (0\u201317)", "sex": "Female", "symptom": "diarrhea", "sym_label": "Diarrhea", "rec_n": 20, "bas_n": 174, "rec_share": 5.7, "bas_share": 8.02, "share_shift": -2.32, "rec_rate": 10.0, "bas_rate": 0.575, "rel_increase": 1640.0, "abs_change": 9.425, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "UNCERTAIN \u2014 REQUIRES VALIDATION", "recommendation": "Monitor Diarrhea in Pediatric (0\u201317) Female over next 7 days. Collect additional data to distinguish true signal from random variation. Small sample (n=20) limits confidence. Low baseline rate (<2%) may produce floor-effect artefacts. Cross-validate with wastewater and ED syndromic streams (see US#9)."}, {"age_band": "Pediatric (0\u201317)", "sex": "Female", "symptom": "red_eyes", "sym_label": "Red Eyes", "rec_n": 20, "bas_n": 174, "rec_share": 5.7, "bas_share": 8.02, "share_shift": -2.32, "rec_rate": 5.0, "bas_rate": 0.575, "rel_increase": 770.0, "abs_change": 4.425, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "UNCERTAIN \u2014 REQUIRES VALIDATION", "recommendation": "Monitor Red Eyes in Pediatric (0\u201317) Female over next 7 days. Collect additional data to distinguish true signal from random variation. Small sample (n=20) limits confidence. Low baseline rate (<2%) may produce floor-effect artefacts. Cross-validate with wastewater and ED syndromic streams (see US#9)."}, {"age_band": "Pediatric (0\u201317)", "sex": "Female", "symptom": "muscle_or_body_aches_and_pains", "sym_label": "Muscle Aches", "rec_n": 20, "bas_n": 174, "rec_share": 5.7, "bas_share": 8.02, "share_shift": -2.32, "rec_rate": 5.0, "bas_rate": 1.724, "rel_increase": 190.0, "abs_change": 3.276, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "UNCERTAIN \u2014 REQUIRES VALIDATION", "recommendation": "Monitor Muscle Aches in Pediatric (0\u201317) Female over next 7 days. Collect additional data to distinguish true signal from random variation. Small sample (n=20) limits confidence. Low baseline rate (<2%) may produce floor-effect artefacts. Cross-validate with wastewater and ED syndromic streams (see US#9)."}, {"age_band": "Young Adult (18\u201334)", "sex": "Female", "symptom": "difficulty_breathing", "sym_label": "Difficulty Breathing", "rec_n": 112, "bas_n": 689, "rec_share": 31.91, "bas_share": 31.77, "share_shift": 0.14, "rec_rate": 0.893, "bas_rate": 0.435, "rel_increase": 105.06, "abs_change": 0.457, "sparse": false, "high_acuity": true, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "[HIGH PRIORITY] Investigate Difficulty Breathing elevation in Young Adult (18\u201334) Female \u2014 high-acuity symptom with syndromic co-elevation. Alert county health departments; consider active case-finding; review ED and hospital discharge data for this demographic."}, {"age_band": "Young Adult (18\u201334)", "sex": "Female", "symptom": "muscle_or_body_aches_and_pains", "sym_label": "Muscle Aches", "rec_n": 112, "bas_n": 689, "rec_share": 31.91, "bas_share": 31.77, "share_shift": 0.14, "rec_rate": 0.893, "bas_rate": 0.435, "rel_increase": 105.06, "abs_change": 0.457, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "Increase surveillance frequency for Young Adult (18\u201334) Female. Prepare targeted public health messaging. Notify primary care providers in high-reporter postal codes."}, {"age_band": "Young Adult (18\u201334)", "sex": "Male", "symptom": "nauseas_vomiting", "sym_label": "Nausea/Vomiting", "rec_n": 54, "bas_n": 292, "rec_share": 15.38, "bas_share": 13.46, "share_shift": 1.92, "rec_rate": 1.852, "bas_rate": 1.027, "rel_increase": 80.25, "abs_change": 0.824, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "Investigate sex-differentiated Nausea/Vomiting pattern in Young Adult (18\u201334). Assess occupational exposure, healthcare-seeking behaviour, and biological susceptibility differences. Cross-reference with occupational health databases."}, {"age_band": "Young Adult (18\u201334)", "sex": "Male", "symptom": "discolored_or_bloody_urine", "sym_label": "Discolored/Bloody Urine", "rec_n": 54, "bas_n": 292, "rec_share": 15.38, "bas_share": 13.46, "share_shift": 1.92, "rec_rate": 1.852, "bas_rate": 1.027, "rel_increase": 80.25, "abs_change": 0.824, "sparse": false, "high_acuity": true, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "[HIGH PRIORITY] Investigate Discolored/Bloody Urine elevation in Young Adult (18\u201334) Male \u2014 high-acuity symptom with syndromic co-elevation. Alert county health departments; consider active case-finding; review ED and hospital discharge data for this demographic."}, {"age_band": "Young Adult (18\u201334)", "sex": "Female", "symptom": "fever", "sym_label": "Fever", "rec_n": 112, "bas_n": 689, "rec_share": 31.91, "bas_share": 31.77, "share_shift": 0.14, "rec_rate": 0.893, "bas_rate": 0.581, "rel_increase": 53.79, "abs_change": 0.312, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "Investigate sex-differentiated Fever pattern in Young Adult (18\u201334). Assess occupational exposure, healthcare-seeking behaviour, and biological susceptibility differences. Cross-reference with occupational health databases."}, {"age_band": "Young Adult (18\u201334)", "sex": "Male", "symptom": "muscle_or_body_aches_and_pains", "sym_label": "Muscle Aches", "rec_n": 54, "bas_n": 292, "rec_share": 15.38, "bas_share": 13.46, "share_shift": 1.92, "rec_rate": 1.852, "bas_rate": 1.37, "rel_increase": 35.19, "abs_change": 0.482, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "Increase surveillance frequency for Young Adult (18\u201334) Male. Prepare targeted public health messaging. Notify primary care providers in high-reporter postal codes."}, {"age_band": "Young Adult (18\u201334)", "sex": "Female", "symptom": "sore_throat", "sym_label": "Sore Throat", "rec_n": 112, "bas_n": 689, "rec_share": 31.91, "bas_share": 31.77, "share_shift": 0.14, "rec_rate": 1.786, "bas_rate": 1.451, "rel_increase": 23.04, "abs_change": 0.334, "sparse": false, "high_acuity": false, "total_rec_n": 351, "total_bas_n": 2169, "flag_rate": true, "flag_share": false, "flagged": true, "assessment": "LIKELY TRUE SIGNAL", "recommendation": "Investigate sex-differentiated Sore Throat pattern in Young Adult (18\u201334). Assess occupational exposure, healthcare-seeking behaviour, and biological susceptibility differences. Cross-reference with occupational health databases."}];
+const AGE_BANDS      = ["Pediatric (0\u201317)", "Young Adult (18\u201334)", "Middle Adult (35\u201354)", "Pre-Senior (55\u201364)", "Senior (65+)"];
+const SEX_CATS       = ["Female", "Male", "Other/Unknown"];
+const SYM_KEYS       = ["cough_congestion", "sore_throat", "difficulty_breathing", "nauseas_vomiting", "diarrhea", "muscle_or_body_aches_and_pains", "fever", "chills", "red_eyes", "rash", "loss_of_smell_or_taste", "bleeding_from_body_openings", "yellow_skin_yellow_eyes", "discolored_or_bloody_urine"];
+const SYM_LABELS     = {"cough_congestion": "Cough/Congestion", "sore_throat": "Sore Throat", "difficulty_breathing": "Difficulty Breathing", "nauseas_vomiting": "Nausea/Vomiting", "diarrhea": "Diarrhea", "muscle_or_body_aches_and_pains": "Muscle Aches", "fever": "Fever", "chills": "Chills", "red_eyes": "Red Eyes", "rash": "Rash", "loss_of_smell_or_taste": "Loss of Smell/Taste", "bleeding_from_body_openings": "Bleeding (Openings)", "yellow_skin_yellow_eyes": "Yellow Skin/Eyes", "discolored_or_bloody_urine": "Discolored/Bloody Urine"};
+const AGE_COLORS     = ["#00d2d3", "#43e97b", "#6c63ff", "#ffa502", "#ff4757"];
+const SEX_COLORS     = ["#ff6b9d", "#1e90ff", "#8892a4"];
+const BG="#0f1117",SURFACE="#1a1d27",ACCENT="#6c63ff",RED="#ff4757",
+      ORANGE="#ffa502",GREEN="#43e97b",BLUE="#1e90ff",CYAN="#00d2d3",
+      PINK="#ff6b9d",TEXT="#e8eaf6",MUTED="#8892a4";
+
+let assessFilter = "all";
+let prevChart = null;
+
+// Populate symptom filter
+(function() {
+  const sel = document.getElementById("symFilter");
+  SYM_KEYS.forEach(k => {
+    const opt = document.createElement("option");
+    opt.value = k; opt.textContent = SYM_LABELS[k];
+    sel.appendChild(opt);
+  });
+})();
+
+// ── Panel A: Reporter Share ────────────────────────────────────────────────
+(function() {
+  const ctx  = document.getElementById("shareChart").getContext("2d");
+  const rec  = AGE_BANDS.map(b => SHARE_DATA[b]?.rec_share ?? 0);
+  const bas  = AGE_BANDS.map(b => SHARE_DATA[b]?.bas_share ?? 0);
+  const lbls = AGE_BANDS.map(b => b.split(" (")[0]);
+  new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels: lbls,
+      datasets:[
+        {label:"Recent (7d)",  data:rec, backgroundColor:AGE_COLORS.map(c=>c+"cc"), borderColor:AGE_COLORS, borderWidth:1},
+        {label:"Baseline (30d)", data:bas, backgroundColor:AGE_COLORS.map(c=>c+"44"), borderColor:AGE_COLORS, borderWidth:1, borderDash:[4,2]},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:TEXT,boxWidth:12}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw?.toFixed(1)}%`}} },
+      scales:{
+        x:{ticks:{color:TEXT,font:{size:9}},grid:{color:"#2a2d3e"}},
+        y:{ticks:{color:TEXT,callback:v=>v+"%"},grid:{color:"#2a2d3e"},
+           title:{display:true,text:"% of Total Reporters",color:MUTED}}
+      }
+    }
+  });
+})();
+
+// ── Panel B: Heatmap ───────────────────────────────────────────────────────
+(function() {
+  const container = document.getElementById("heatmapGrid");
+  const nAge = AGE_BANDS.length;
+  const nSex = SEX_CATS.length;
+
+  // Compute vmax
+  let vmax = 0;
+  Object.values(HEATMAP_DATA).forEach(v => {
+    if (v && v.rel_increase) vmax = Math.max(vmax, v.rel_increase);
+  });
+  if (vmax === 0) vmax = 100;
+
+  // Header row
+  let html = `<div style="display:grid;grid-template-columns:160px repeat(${nSex},1fr);gap:4px;margin-top:8px">`;
+  html += `<div style="color:var(--muted);font-size:.75rem;align-self:end">Age Band</div>`;
+  SEX_CATS.forEach((s,i) => {
+    html += `<div style="text-align:center;color:${SEX_COLORS[i]};font-size:.8rem;font-weight:700">${s}</div>`;
+  });
+
+  AGE_BANDS.forEach((band, ri) => {
+    html += `<div style="color:var(--text);font-size:.78rem;padding:4px 0">${band.split(" (")[0]}</div>`;
+    SEX_CATS.forEach((sex, ci) => {
+      const key = `${band}||${sex}`;
+      const d   = HEATMAP_DATA[key];
+      let bg, txt, tip;
+      if (!d || d.rel_increase === null) {
+        bg = "#1a1d27"; txt = "—"; tip = "No signal";
+      } else {
+        const intensity = Math.min(d.rel_increase / vmax, 1);
+        const r = Math.round(255 * intensity);
+        const g = Math.round(71 * (1 - intensity));
+        const b = Math.round(87 * (1 - intensity));
+        bg  = `rgb(${r},${g},${b})`;
+        txt = `+${d.rel_increase?.toFixed(0)}%`;
+        tip = `${band} × ${sex}: ${d.symptom} — +${d.rel_increase?.toFixed(1)}% rel. increase\nBaseline: ${d.bas_rate?.toFixed(1)}% → Recent: ${d.rec_rate?.toFixed(1)}%\n${d.assessment}`;
+      }
+      html += `<div class="hm-cell" style="background:${bg};color:white" title="${tip}">${txt}</div>`;
+    });
+  });
+  html += `</div>`;
+
+  // Legend
+  html += `<div style="margin-top:10px;font-size:.73rem;color:var(--muted)">
+    Colour intensity → relative rate increase magnitude. "—" = no rate signal above threshold or sparse stratum.<br>
+    Hover cells for detail: symptom, rates, and signal assessment.
+  </div>`;
+  container.innerHTML = html;
+})();
+
+// ── Panel C: Prevalence Chart ──────────────────────────────────────────────
+function updatePrevalenceChart() {
+  const ctx   = document.getElementById("prevalenceChart");
+  const sex   = document.getElementById("sexFilter").value;
+  const symK  = document.getElementById("symFilter").value;
+
+  // Compute top 6 symptoms by mean recent rate across all strata
+  const symMeans = SYM_KEYS.map(k => {
+    let sum = 0, cnt = 0;
+    AGE_BANDS.forEach(b => SEX_CATS.forEach(s => {
+      const key = `${b}||${s}`;
+      const d = PREVALENCE_DATA[k]?.[key];
+      if (d && d.rec_rate !== null && !d.sparse) { sum += d.rec_rate; cnt++; }
+    }));
+    return {key: k, mean: cnt > 0 ? sum / cnt : 0};
+  }).sort((a,b) => b.mean - a.mean).slice(0,6).map(x => x.key);
+
+  const targetSyms = (symK !== "all") ? [symK] : symMeans;
+  const targetSexes = (sex !== "all") ? [sex] : SEX_CATS;
+  const lbls = AGE_BANDS.map(b => b.split(" (")[0]);
+
+  const datasets = [];
+  const clrs = [CYAN, GREEN, ACCENT, ORANGE, RED, PINK, BLUE];
+  targetSyms.forEach((k, si) => {
+    targetSexes.forEach((s, xi) => {
+      const data = AGE_BANDS.map(b => {
+        const key = `${b}||${s}`;
+        const d   = PREVALENCE_DATA[k]?.[key];
+        return (d && !d.sparse) ? d.rec_rate : null;
+      });
+      datasets.push({
+        label: `${SYM_LABELS[k]} (${s})`,
+        data,
+        backgroundColor: clrs[si % clrs.length] + (targetSexes.length > 1 && xi === 1 ? "55" : "cc"),
+        borderColor:     clrs[si % clrs.length],
+        borderWidth: 1,
+        borderDash: xi === 1 ? [4, 2] : [],
+      });
+    });
+  });
+
+  if (prevChart) prevChart.destroy();
+  prevChart = new Chart(ctx.getContext("2d"), {
+    type:"bar",
+    data:{ labels: lbls, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:TEXT,boxWidth:10,font:{size:9}}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw?.toFixed(1)}%`}} },
+      scales:{
+        x:{ticks:{color:TEXT,font:{size:8}},grid:{color:"#2a2d3e"}},
+        y:{ticks:{color:TEXT,callback:v=>v+"%"},grid:{color:"#2a2d3e"},
+           title:{display:true,text:"Prevalence % (YES reporters)",color:MUTED}}
+      }
+    }
+  });
+}
+updatePrevalenceChart();
+
+// ── Panel D: Flagged signal comparison ────────────────────────────────────
+(function() {
+  const ctx = document.getElementById("sigChart").getContext("2d");
+  const top = FLAGGED_DATA.filter(r => r.flag_rate).slice(0, 6);
+  if (top.length === 0) {
+    ctx.canvas.parentElement.innerHTML = "<p style='color:var(--muted);text-align:center;padding:40px'>No rate-flagged signals in current window.</p>";
+    return;
+  }
+  const lbls  = top.map(r => `${r.age_band?.split(" (")[0]}\n${r.sex}\n${r.sym_label}`);
+  const bas   = top.map(r => r.bas_rate);
+  const rec   = top.map(r => r.rec_rate);
+  new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels: lbls,
+      datasets:[
+        {label:"Baseline (30d)", data:bas, backgroundColor:BLUE+"99", borderColor:BLUE, borderWidth:1},
+        {label:"Recent (7d)",  data:rec, backgroundColor:RED+"bb",  borderColor:RED,  borderWidth:1},
+      ]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{labels:{color:TEXT,boxWidth:12}}, tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.raw?.toFixed(1)}%`}} },
+      scales:{
+        x:{ticks:{color:TEXT,font:{size:8,lineHeight:1.2}},grid:{color:"#2a2d3e"}},
+        y:{ticks:{color:TEXT,callback:v=>v+"%"},grid:{color:"#2a2d3e"},
+           title:{display:true,text:"Symptom Prevalence %",color:MUTED}}
+      }
+    }
+  });
+})();
+
+// ── Panel E: Decision Table ────────────────────────────────────────────────
+function setAssessFilter(val, btn) {
+  assessFilter = val;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  btn.classList.add("active");
+  filterTable();
+}
+
+function filterTable() {
+  const rateT  = parseFloat(document.getElementById("rateThresh").value);
+  const shareT = parseFloat(document.getElementById("shareThresh").value);
+  const sex    = document.getElementById("sexFilter").value;
+  const sym    = document.getElementById("symFilter").value;
+
+  let data = FLAGGED_DATA.filter(r => {
+    const matchRate  = r.flag_rate && r.rel_increase > rateT;
+    const matchShare = r.flag_share && Math.abs(r.share_shift) > shareT;
+    if (!matchRate && !matchShare) return false;
+    if (sex !== "all" && r.sex !== sex) return false;
+    if (sym !== "all" && r.symptom !== sym) return false;
+    if (assessFilter === "TRUE"     && !r.assessment?.includes("TRUE")) return false;
+    if (assessFilter === "ARTIFACT" && !r.assessment?.includes("ARTIFACT")) return false;
+    if (assessFilter === "UNCERTAIN"&& !r.assessment?.includes("UNCERTAIN")) return false;
+    return true;
+  });
+
+  document.getElementById("flagCount").textContent = `(${data.length} rows)`;
+
+  const container = document.getElementById("flagTableContainer");
+  if (data.length === 0) {
+    container.innerHTML = "<p style='color:var(--muted);padding:20px;text-align:center'>No results match current filters.</p>";
+    return;
+  }
+
+  function assessClass(a) {
+    if (!a) return "";
+    if (a.includes("TRUE"))     return "sig-true";
+    if (a.includes("ARTIFACT")) return "sig-artifact";
+    return "sig-uncertain";
+  }
+
+  let html = `<table><thead><tr>
+    <th>Age Band</th><th>Sex</th><th>Symptom</th>
+    <th>Baseline %</th><th>Recent %</th><th>Rel. Increase</th>
+    <th>Share Shift</th><th>n (recent)</th><th>Flags</th><th>Assessment</th>
+  </tr></thead><tbody>`;
+
+  data.forEach(r => {
+    const relStr = r.rel_increase !== null
+      ? `<span style="color:${r.rel_increase > rateT ? RED : MUTED}">${r.rel_increase > 0 ? "+" : ""}${r.rel_increase?.toFixed(1)}%</span>`
+      : "N/A";
+    const shareStr = `<span style="color:${Math.abs(r.share_shift) > shareT ? ORANGE : MUTED}">${r.share_shift > 0 ? "+" : ""}${r.share_shift?.toFixed(1)}pp</span>`;
+    const flags = (r.flag_rate ? '<span class="flag-r">R↑</span> ' : '') +
+                  (r.flag_share ? '<span class="flag-s">S⇔</span>' : '');
+    html += `<tr>
+      <td style="font-weight:600">${r.age_band?.split(" (")[0]}</td>
+      <td>${r.sex}</td>
+      <td>${r.sym_label}</td>
+      <td>${r.bas_rate?.toFixed(1)}%</td>
+      <td>${r.rec_rate?.toFixed(1)}%</td>
+      <td>${relStr}</td>
+      <td>${shareStr}</td>
+      <td>${r.rec_n}</td>
+      <td>${flags}</td>
+      <td><span class="badge ${assessClass(r.assessment)}">${r.assessment?.split(" — ")[0]}</span></td>
+    </tr>`;
+  });
+  html += "</tbody></table>";
+  container.innerHTML = html;
+}
+filterTable();
+</script>
+</body>
+</html>
