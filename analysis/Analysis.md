@@ -6,11 +6,14 @@
 
 **All mockup dashboards created using a small data sample `epihack-mini.db`, provided by Keng**
 
+> *All generated code scripts - Python and HTML - depend strongly on the structure of the provided SQL-lite database snapshot*.
+> *If using a distinct data file structure, the generated code needs to be adapted.*  
+
 A [user stories document](https://github.com/kengggg/epihack-arizona/blob/main/analysis/UserStories/EpiHack_UserStories_LLMPrompts.pdf) was created to pair with  LLM prompts for each user case scenarios.
 
-Please see: [**Presentation for the Analysis work**](https://github.com/kengggg/epihack-arizona/blob/main/analysis/UserStories/EpiHack_One_Health_AI.pdf)
+Please see: [**Presentation for the Analysis work**](https://github.com/kengggg/epihack-arizona/blob/main/analysis/UserStories /EpiHack_One_Health_AI.pdf)
 
-Claude Cowork using Sonnet 4.6 was prompted with a collection of prompts corresponding to different user cases for users and Public Health Officials. For each user case a Pthon Script was created to extract data for the corresponding dashboard in HTML.
+Anthropic Claude Cowork using Sonnet 4.6 was prompted with a collection of prompts corresponding to different user cases for users and Public Health Officials. For each user case a Pthon Script was created to extract data for the corresponding dashboard in HTML.
 
 
 ### User Story Prompts — Individual Survey Participants
