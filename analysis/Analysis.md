@@ -4,7 +4,8 @@
 
 ***
 
-**All mockup dashboards created using a small data sample `epihack-mini.db`, provided by Keng**
+**All mockup dashboards created using a small data sample `epihack-mini.db`, provided by Patipat Susumpao (Keng)**
+ :50,000 records, 138 postal codes, 3-year date range (2023–2026).
 
 > *All generated code scripts - Python and HTML - depend strongly on the structure of the provided SQL-lite database snapshot*.
 > *If using a distinct data file structure, the generated code needs to be adapted.*  
