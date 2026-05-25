@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<!-- saved from url=(0090)file:///Users/carlos/Documents/Claude/Projects/EpiHack/rare_event_cooccurrence_report.html -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rare Event Co-Occurrence Analysis — Arizona</title>
+<script src="./Rare Event Co-Occurrence Analysis — Arizona_files/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0f1117;--surface:#1a1d27;--accent:#6c63ff;--red:#ff4757;--orange:#ffa502;
+         --green:#43e97b;--yellow:#ffd32a;--blue:#1e90ff;--cyan:#00d2d3;
+         --text:#e8eaf6;--muted:#8892a4;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px}
+  header{background:var(--surface);border-bottom:2px solid var(--accent);padding:18px 28px}
+  header h1{font-size:1.5rem;color:var(--accent)}
+  header p{color:var(--muted);font-size:.85rem;margin-top:4px}
+  .meta-bar{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+  .chip{background:rgba(108,99,255,.15);border:1px solid var(--accent);border-radius:20px;padding:4px 14px;font-size:.78rem;color:var(--accent)}
+  .chip-red{background:rgba(255,71,87,.2);border-color:var(--red);color:var(--red)}
+  .chip-orange{background:rgba(255,165,2,.2);border-color:var(--orange);color:var(--orange)}
+  .chip-yellow{background:rgba(255,211,42,.2);border-color:var(--yellow);color:var(--yellow)}
+  .dashboard{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px 28px}
+  .panel{background:var(--surface);border-radius:10px;padding:20px;border:1px solid #2a2d3e}
+  .panel-full{grid-column:1/-1}
+  .panel h2{font-size:.95rem;color:var(--accent);margin-bottom:14px;font-weight:600}
+  .canvas-wrap{position:relative;height:340px}
+  .heatmap-wrap{overflow-x:auto}
+  .hm-table{border-collapse:separate;border-spacing:2px;font-size:.62rem}
+  .hm-cell{width:28px;height:28px;border-radius:3px;cursor:default;transition:transform .1s}
+  .hm-cell:hover{transform:scale(1.5);z-index:10;position:relative}
+  table.signal-table{width:100%;border-collapse:collapse;font-size:.81rem;margin-top:8px}
+  thead th{background:rgba(108,99,255,.15);color:var(--accent);padding:8px 10px;text-align:left;
+            border-bottom:2px solid var(--accent);white-space:nowrap;cursor:pointer}
+  thead th:hover{background:rgba(108,99,255,.25)}
+  tbody tr{border-bottom:1px solid #2a2d3e;transition:background .15s}
+  tbody tr:hover{background:rgba(108,99,255,.07)}
+  tbody td{padding:7px 10px;vertical-align:top}
+  .badge{display:inline-block;border-radius:12px;padding:2px 10px;font-size:.73rem;font-weight:700}
+  .crit{background:rgba(255,71,87,.2);color:var(--red);border:1px solid var(--red)}
+  .high{background:rgba(255,165,2,.2);color:var(--orange);border:1px solid var(--orange)}
+  .mod{background:rgba(255,211,42,.2);color:var(--yellow);border:1px solid var(--yellow)}
+  .flag-z{color:var(--orange);font-weight:700;font-size:.73rem}
+  .flag-h{color:var(--red);font-weight:700;font-size:.73rem}
+  .flag-c{color:var(--cyan);font-weight:700;font-size:.73rem}
+  .ddx-list{margin-top:6px;padding:8px 12px;background:var(--bg);border-radius:6px;font-size:.78rem;line-height:1.7}
+  .narrative-box{background:var(--bg);border:1px solid #2a2d3e;border-radius:8px;padding:18px;font-size:.82rem;line-height:1.75;font-family:'Courier New',monospace;max-height:520px;overflow-y:auto}
+  .prompt-box{background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:14px;font-size:.77rem;line-height:1.6;color:var(--muted);max-height:300px;overflow-y:auto}
+  .summary-cards{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .sc{flex:1;min-width:110px;background:var(--bg);border-radius:8px;padding:14px 12px;border:1px solid #2a2d3e;text-align:center}
+  .sc-val{font-size:2rem;font-weight:800}
+  .sc-lbl{font-size:.74rem;color:var(--muted);margin-top:4px}
+  .controls{background:var(--surface);border-bottom:1px solid #2a2d3e;padding:14px 28px;display:flex;gap:24px;flex-wrap:wrap;align-items:center}
+  .ctrl{display:flex;align-items:center;gap:8px}
+  .ctrl label{color:var(--muted);font-size:.82rem}
+  .ctrl input[type=range]{accent-color:var(--accent)}
+  .ctrl span{color:var(--accent);font-weight:700;min-width:40px}
+  footer{text-align:center;padding:16px;color:var(--muted);font-size:.75rem;border-top:1px solid #2a2d3e}
+  .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Rare Event Co-Occurrence Signal Analysis — Arizona</h1>
+  <p>90-day block-bootstrap baseline | 91 symptom pairs | Full Arizona-relevant DDx | 2026-05-21</p>
+  <div class="meta-bar">
+    <span class="chip">User Story #11</span>
+    <span class="chip">Window: 7d (n=351)</span>
+    <span class="chip">Baseline: 90d</span>
+    <span class="chip-orange">Z&gt;2 flags: 0</span>
+    <span class="chip-red">High-concern: 1</span>
+    <span class="chip">Cluster≤2: 12</span>
+    <span class="chip-yellow">Escalated (≥2): 1</span>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="ctrl">
+    <label>Z-score threshold:</label>
+    <input type="range" id="zThresh" min="1" max="5" step="0.5" value="2" oninput="document.getElementById(&#39;zVal&#39;).textContent=this.value;renderTable()">
+    <span id="zVal">2.0</span>
+  </div>
+  <div class="ctrl">
+    <label>Show high-concern only:</label>
+    <input type="checkbox" id="hcOnly" onchange="renderTable()">
+  </div>
+  <div class="ctrl">
+    <label>Heatmap mode:</label>
+    <select id="hmMode" onchange="renderHeatmap()">
+      <option value="joint">Joint Prevalence %</option>
+      <option value="zscore">Z-Score</option>
+    </select>
+  </div>
+  <div class="ctrl" style="margin-left:auto;font-size:.78rem;color:var(--muted)">
+    <span class="legend-dot" style="background:var(--orange)"></span>Z&gt;2 &nbsp;
+    <span class="legend-dot" style="background:var(--red)"></span>High-concern &nbsp;
+    <span class="legend-dot" style="background:var(--cyan)"></span>Cluster≤2
+  </div>
+</div>
+
+<div class="dashboard">
+
+  <!-- Summary Cards -->
+  <div class="panel panel-full">
+    <div class="summary-cards">
+      <div class="sc"><div class="sc-val" style="color:var(--accent)">91</div><div class="sc-lbl">Pairs<br>Evaluated</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--orange)">0</div><div class="sc-lbl">Z&gt;2<br>Signals</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--red)">1</div><div class="sc-lbl">High-Concern<br>Pairs</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--cyan)">12</div><div class="sc-lbl">Geographic<br>Clusters</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--yellow)">1</div><div class="sc-lbl">Escalated<br>(≥2 flags)</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--accent)">12</div><div class="sc-lbl">Total<br>Flagged</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--green)">351</div><div class="sc-lbl">Recent<br>Reporters</div></div>
+      <div class="sc"><div class="sc-val" style="color:var(--muted)">12</div><div class="sc-lbl">Baseline<br>Blocks</div></div>
+    </div>
+  </div>
+
+  <!-- Panel A/B: Heatmap -->
+  <div class="panel panel-full">
+    <h2 id="hmTitle">Panel A — Joint Prevalence Co-Occurrence Heatmap (%)</h2>
+    <div class="heatmap-wrap"><div id="heatmapContainer"><table class="hm-table"><tbody><tr><td style="width:80px"></td><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Cough/Congestion</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Sore Throat</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Diff. Breathing</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Nausea/Vomiting</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Diarrhea</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Muscle Aches</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Fever</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Chills</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Red Eyes</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Rash</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--muted)">Loss Smell/Taste</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--red);font-weight:700">Bleeding (Openings)</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--red);font-weight:700">Yellow Skin/Eyes</th><th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;color:var(--red);font-weight:700">Discolored/Bloody Urine</th></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Cough/Congestion</td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Cough/Congestion + Sore Throat: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Cough/Congestion + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Cough/Congestion + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Cough/Congestion + Diarrhea: 0.28%"></td><td class="hm-cell" style="background:rgb(255,0,0);" title="Cough/Congestion + Muscle Aches: 0.57%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Cough/Congestion + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Cough/Congestion + Chills: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Cough/Congestion + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Cough/Congestion + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Cough/Congestion + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Cough/Congestion + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Cough/Congestion + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Cough/Congestion + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Sore Throat</td><td class="hm-cell" style="background:rgb(128,77,0);" title="Sore Throat + Cough/Congestion: 0.28%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Sore Throat + Diff. Breathing: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Sore Throat + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Sore Throat + Diarrhea: 0.28%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Sore Throat + Muscle Aches: 0.28%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Sore Throat + Fever: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Sore Throat + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Sore Throat + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Sore Throat + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Sore Throat + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Sore Throat + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Sore Throat + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Sore Throat + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Diff. Breathing</td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Diff. Breathing + Sore Throat: 0.28%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diff. Breathing + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Diff. Breathing + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Diff. Breathing + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Diff. Breathing + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Nausea/Vomiting</td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Nausea/Vomiting + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Nausea/Vomiting + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Nausea/Vomiting + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);border:1px solid rgba(255,71,87,0.5)" title="Nausea/Vomiting + Discolored/Bloody Urine: 0.28%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Diarrhea</td><td class="hm-cell" style="background:rgb(128,77,0);" title="Diarrhea + Cough/Congestion: 0.28%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Diarrhea + Sore Throat: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Diarrhea + Muscle Aches: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Diarrhea + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Diarrhea + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Diarrhea + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Diarrhea + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Muscle Aches</td><td class="hm-cell" style="background:rgb(255,0,0);" title="Muscle Aches + Cough/Congestion: 0.57%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Muscle Aches + Sore Throat: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Muscle Aches + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Muscle Aches + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Muscle Aches + Diarrhea: 0.28%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Muscle Aches + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Muscle Aches + Chills: 0.28%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Muscle Aches + Red Eyes: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Muscle Aches + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Muscle Aches + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Muscle Aches + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Muscle Aches + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Muscle Aches + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Fever</td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Fever + Sore Throat: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Fever + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Fever + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Fever + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Fever + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Chills</td><td class="hm-cell" style="background:rgb(128,77,0);" title="Chills + Cough/Congestion: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Chills + Muscle Aches: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Fever: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Chills + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Chills + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Chills + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Chills + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Red Eyes</td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);" title="Red Eyes + Muscle Aches: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Chills: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Red Eyes + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Red Eyes + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Red Eyes + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Red Eyes + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Rash</td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Rash + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Rash + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Rash + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Rash + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;">Loss Smell/Taste</td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);" title="Loss Smell/Taste + Rash: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Loss Smell/Taste + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Loss Smell/Taste + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Loss Smell/Taste + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;color:var(--red);font-weight:700">Bleeding (Openings)</td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Bleeding (Openings) + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;color:var(--red);font-weight:700">Yellow Skin/Eyes</td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Nausea/Vomiting: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Yellow Skin/Eyes + Discolored/Bloody Urine: 0.00%"></td></tr><tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;color:var(--red);font-weight:700">Discolored/Bloody Urine</td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Cough/Congestion: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Sore Throat: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Diff. Breathing: 0.00%"></td><td class="hm-cell" style="background:rgb(128,77,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Nausea/Vomiting: 0.28%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Diarrhea: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Muscle Aches: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Fever: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Chills: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Red Eyes: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Rash: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Loss Smell/Taste: 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Bleeding (Openings): 0.00%"></td><td class="hm-cell" style="background:rgb(0,153,0);border:1px solid rgba(255,71,87,0.5)" title="Discolored/Bloody Urine + Yellow Skin/Eyes: 0.00%"></td><td class="hm-cell" style="background:#2a2d3e"></td></tr></tbody></table></div></div>
+    <div style="margin-top:8px;font-size:.73rem;color:var(--muted)">
+      Red borders mark high-concern symptom rows/columns. ★ = Z-score flagged cell. Hover cells for detail.
+    </div>
+  </div>
+
+  <!-- Panel C: Flagged pairs chart -->
+  <div class="panel">
+    <h2>Panel C — Flagged Pairs by Z-Score</h2>
+    <div class="canvas-wrap"><canvas id="zChart" width="1064" height="680" style="display: block; box-sizing: border-box; height: 340px; width: 532px;"></canvas></div>
+  </div>
+
+  <!-- Panel D: DDx summary -->
+  <div class="panel">
+    <h2>Panel D — Differential Diagnosis Explorer</h2>
+    <div id="ddxExplorer" style="font-size:.82rem"><div style="margin-bottom:10px">
+    <strong style="color:var(--yellow)">Nausea/Vomiting + Discolored/Bloody Urine</strong>
+    <span style="color:var(--muted);font-size:.75rem;margin-left:10px">
+      Z=0.87 | Rate=0.285% | n=1 | 1 postal(s)
+    </span>
+  </div><div style="margin:8px 0;padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid #ffa502">
+      <strong style="color:#ffa502">1. Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)</strong>
+      <span class="badge high" style="margin-left:8px">HIGH</span>
+      
+      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">Pathogen: E. coli O157:H7 or other STEC</div>
+      <div style="font-size:.75rem;margin-top:3px">🔬 Lab: Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)</div>
+      <div style="font-size:.75rem;color:var(--cyan);margin-top:2px">🔍 Epi: Food exposure history: ground beef, leafy greens, unpasteurized products</div>
+    </div><div style="margin:8px 0;padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid #ffa502">
+      <strong style="color:#ffa502">2. Leptospirosis (Weil's Disease — severe form)</strong>
+      <span class="badge high" style="margin-left:8px">HIGH</span>
+      <span style="color:var(--green);font-size:.73rem;margin-left:6px">🌵 AZ Endemic</span>
+      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">Pathogen: Leptospira interrogans (water/soil contact, zoonotic)</div>
+      <div style="font-size:.75rem;margin-top:3px">🔬 Lab: Microscopic Agglutination Test (MAT) — gold standard serology, paired sera</div>
+      <div style="font-size:.75rem;color:var(--cyan);margin-top:2px">🔍 Epi: Flood/irrigation water exposure in 2–30 days prior to onset</div>
+    </div><div style="margin:8px 0;padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid #ffd32a">
+      <strong style="color:#ffd32a">3. Rhabdomyolysis (Exertional or Toxic)</strong>
+      <span class="badge mod" style="margin-left:8px">MODERATE</span>
+      <span style="color:var(--green);font-size:.73rem;margin-left:6px">🌵 AZ Endemic</span>
+      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">Pathogen: Non-infectious: exertional, drug/toxin, heat stroke</div>
+      <div style="font-size:.75rem;margin-top:3px">🔬 Lab: Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis</div>
+      <div style="font-size:.75rem;color:var(--cyan);margin-top:2px">🔍 Epi: Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)</div>
+    </div></div>
+  </div>
+
+  <!-- Panel E: Flagged signal table -->
+  <div class="panel panel-full">
+    <h2>Panel E — Flagged Signal Decision Table <span id="flagCount" style="color:var(--muted);font-size:.82rem">(12 pairs)</span></h2>
+    <div id="flagTableContainer"><table class="signal-table"><thead><tr>
+    <th>Pair</th><th>Joint %</th><th>Z-Score</th><th>n Cases</th>
+    <th>Postals</th><th>Flags</th><th>Top DDx (concern)</th>
+  </tr></thead><tbody><tr onclick="showDDX({&quot;sym_a&quot;:&quot;nauseas_vomiting&quot;,&quot;sym_b&quot;:&quot;discolored_or_bloody_urine&quot;,&quot;label_a&quot;:&quot;Nausea/Vomiting&quot;,&quot;label_b&quot;:&quot;Discolored/Bloody Urine&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.1125,&quot;baseline_sd&quot;:0.1989,&quot;z_score&quot;:0.87,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:true,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:true,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:2,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;E. coli O157:H7 or other STEC&quot;,&quot;az_endemic&quot;:false,&quot;lab0&quot;:&quot;Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)&quot;,&quot;epi0&quot;:&quot;Food exposure history: ground beef, leafy greens, unpasteurized products&quot;},{&quot;syndrome&quot;:&quot;Leptospirosis (Weil&#39;s Disease — severe form)&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;Leptospira interrogans (water/soil contact, zoonotic)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Microscopic Agglutination Test (MAT) — gold standard serology, paired sera&quot;,&quot;epi0&quot;:&quot;Flood/irrigation water exposure in 2–30 days prior to onset&quot;},{&quot;syndrome&quot;:&quot;Rhabdomyolysis (Exertional or Toxic)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Non-infectious: exertional, drug/toxin, heat stroke&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis&quot;,&quot;epi0&quot;:&quot;Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Nausea/Vomiting</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Discolored/Bloody Urine</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.113%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">0.87</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-h">HIGH-CONCERN</span> <span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffa502;font-size:.72rem">Hemolytic Uremic Syndrome</span><br><span style="color:#ffa502;font-size:.72rem">Leptospirosis 🌵</span><br><span style="color:#ffd32a;font-size:.72rem">Rhabdomyolysis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;muscle_or_body_aches_and_pains&quot;,&quot;sym_b&quot;:&quot;red_eyes&quot;,&quot;label_a&quot;:&quot;Muscle Aches&quot;,&quot;label_b&quot;:&quot;Red Eyes&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.1145,&quot;baseline_sd&quot;:0.1541,&quot;z_score&quot;:1.11,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Rhabdomyolysis (Exertional or Toxic)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Non-infectious: exertional, drug/toxin, heat stroke&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis&quot;,&quot;epi0&quot;:&quot;Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Muscle Aches</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Red Eyes</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.115%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">1.11</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffd32a;font-size:.72rem">Rhabdomyolysis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;cough_congestion&quot;,&quot;sym_b&quot;:&quot;diarrhea&quot;,&quot;label_a&quot;:&quot;Cough/Congestion&quot;,&quot;label_b&quot;:&quot;Diarrhea&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.1307,&quot;baseline_sd&quot;:0.1785,&quot;z_score&quot;:0.86,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;E. coli O157:H7 or other STEC&quot;,&quot;az_endemic&quot;:false,&quot;lab0&quot;:&quot;Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)&quot;,&quot;epi0&quot;:&quot;Food exposure history: ground beef, leafy greens, unpasteurized products&quot;},{&quot;syndrome&quot;:&quot;Coccidioidomycosis (Valley Fever)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Coccidioides immitis/posadasii (soil-borne fungal)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Coccidioides serology: IgM (EIA or IDTP) — acute infection&quot;,&quot;epi0&quot;:&quot;Soil disturbance activities: construction, farming, archaeology, military exercises&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Cough/Congestion</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Diarrhea</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.131%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">0.86</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffa502;font-size:.72rem">Hemolytic Uremic Syndrome</span><br><span style="color:#ffd32a;font-size:.72rem">Coccidioidomycosis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;diarrhea&quot;,&quot;sym_b&quot;:&quot;muscle_or_body_aches_and_pains&quot;,&quot;label_a&quot;:&quot;Diarrhea&quot;,&quot;label_b&quot;:&quot;Muscle Aches&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.1532,&quot;baseline_sd&quot;:0.1966,&quot;z_score&quot;:0.67,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;E. coli O157:H7 or other STEC&quot;,&quot;az_endemic&quot;:false,&quot;lab0&quot;:&quot;Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)&quot;,&quot;epi0&quot;:&quot;Food exposure history: ground beef, leafy greens, unpasteurized products&quot;},{&quot;syndrome&quot;:&quot;Rhabdomyolysis (Exertional or Toxic)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Non-infectious: exertional, drug/toxin, heat stroke&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis&quot;,&quot;epi0&quot;:&quot;Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Diarrhea</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Muscle Aches</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.153%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">0.67</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffa502;font-size:.72rem">Hemolytic Uremic Syndrome</span><br><span style="color:#ffd32a;font-size:.72rem">Rhabdomyolysis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;sore_throat&quot;,&quot;sym_b&quot;:&quot;diarrhea&quot;,&quot;label_a&quot;:&quot;Sore Throat&quot;,&quot;label_b&quot;:&quot;Diarrhea&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.1584,&quot;baseline_sd&quot;:0.2432,&quot;z_score&quot;:0.52,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;E. coli O157:H7 or other STEC&quot;,&quot;az_endemic&quot;:false,&quot;lab0&quot;:&quot;Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)&quot;,&quot;epi0&quot;:&quot;Food exposure history: ground beef, leafy greens, unpasteurized products&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Sore Throat</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Diarrhea</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.158%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">0.52</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffa502;font-size:.72rem">Hemolytic Uremic Syndrome</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;sore_throat&quot;,&quot;sym_b&quot;:&quot;difficulty_breathing&quot;,&quot;label_a&quot;:&quot;Sore Throat&quot;,&quot;label_b&quot;:&quot;Diff. Breathing&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.1856,&quot;baseline_sd&quot;:0.2539,&quot;z_score&quot;:0.39,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Hantavirus Pulmonary Syndrome (HPS)&quot;,&quot;concern&quot;:&quot;CRITICAL&quot;,&quot;pathogen&quot;:&quot;Sin Nombre hantavirus (rodent-borne aerosol)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Hantavirus IgM/IgG serology (CDC Hantavirus panel) — ELISA&quot;,&quot;epi0&quot;:&quot;Rodent exposure history: cleaning outbuildings, rural/agricultural settings&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Sore Throat</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Diff. Breathing</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.186%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">0.39</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ff4757;font-size:.72rem">Hantavirus Pulmonary Syndrome 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;cough_congestion&quot;,&quot;sym_b&quot;:&quot;muscle_or_body_aches_and_pains&quot;,&quot;label_a&quot;:&quot;Cough/Congestion&quot;,&quot;label_b&quot;:&quot;Muscle Aches&quot;,&quot;rec_rate&quot;:0.5698,&quot;baseline_mean&quot;:0.6154,&quot;baseline_sd&quot;:0.4372,&quot;z_score&quot;:-0.1,&quot;n_joint&quot;:2,&quot;n_postals&quot;:2,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Coccidioidomycosis (Valley Fever)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Coccidioides immitis/posadasii (soil-borne fungal)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Coccidioides serology: IgM (EIA or IDTP) — acute infection&quot;,&quot;epi0&quot;:&quot;Soil disturbance activities: construction, farming, archaeology, military exercises&quot;},{&quot;syndrome&quot;:&quot;Rhabdomyolysis (Exertional or Toxic)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Non-infectious: exertional, drug/toxin, heat stroke&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis&quot;,&quot;epi0&quot;:&quot;Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Cough/Congestion</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Muscle Aches</strong></td>
+      <td>0.570%<br><span style="color:var(--muted);font-size:.72rem">base: 0.615%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">-0.10</td>
+      <td>2</td>
+      <td>2</td>
+      <td><span class="flag-c">CLUSTER(2)</span></td>
+      <td class="ddx-list"><span style="color:#ffd32a;font-size:.72rem">Coccidioidomycosis 🌵</span><br><span style="color:#ffd32a;font-size:.72rem">Rhabdomyolysis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;sore_throat&quot;,&quot;sym_b&quot;:&quot;muscle_or_body_aches_and_pains&quot;,&quot;label_a&quot;:&quot;Sore Throat&quot;,&quot;label_b&quot;:&quot;Muscle Aches&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.4006,&quot;baseline_sd&quot;:0.4486,&quot;z_score&quot;:-0.26,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Rhabdomyolysis (Exertional or Toxic)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Non-infectious: exertional, drug/toxin, heat stroke&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis&quot;,&quot;epi0&quot;:&quot;Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Sore Throat</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Muscle Aches</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.401%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">-0.26</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffd32a;font-size:.72rem">Rhabdomyolysis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;muscle_or_body_aches_and_pains&quot;,&quot;sym_b&quot;:&quot;chills&quot;,&quot;label_a&quot;:&quot;Muscle Aches&quot;,&quot;label_b&quot;:&quot;Chills&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.4953,&quot;baseline_sd&quot;:0.3453,&quot;z_score&quot;:-0.61,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Rhabdomyolysis (Exertional or Toxic)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Non-infectious: exertional, drug/toxin, heat stroke&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis&quot;,&quot;epi0&quot;:&quot;Strenuous physical exertion in high-heat environment (NWS HeatRisk ≥3)&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Muscle Aches</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Chills</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.495%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">-0.61</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffd32a;font-size:.72rem">Rhabdomyolysis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;cough_congestion&quot;,&quot;sym_b&quot;:&quot;chills&quot;,&quot;label_a&quot;:&quot;Cough/Congestion&quot;,&quot;label_b&quot;:&quot;Chills&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.7107,&quot;baseline_sd&quot;:0.5258,&quot;z_score&quot;:-0.81,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Coccidioidomycosis (Valley Fever)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Coccidioides immitis/posadasii (soil-borne fungal)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Coccidioides serology: IgM (EIA or IDTP) — acute infection&quot;,&quot;epi0&quot;:&quot;Soil disturbance activities: construction, farming, archaeology, military exercises&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Cough/Congestion</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Chills</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.711%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">-0.81</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffd32a;font-size:.72rem">Coccidioidomycosis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;cough_congestion&quot;,&quot;sym_b&quot;:&quot;sore_throat&quot;,&quot;label_a&quot;:&quot;Cough/Congestion&quot;,&quot;label_b&quot;:&quot;Sore Throat&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:1.2665,&quot;baseline_sd&quot;:1.1666,&quot;z_score&quot;:-0.84,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Coccidioidomycosis (Valley Fever)&quot;,&quot;concern&quot;:&quot;MODERATE&quot;,&quot;pathogen&quot;:&quot;Coccidioides immitis/posadasii (soil-borne fungal)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Coccidioides serology: IgM (EIA or IDTP) — acute infection&quot;,&quot;epi0&quot;:&quot;Soil disturbance activities: construction, farming, archaeology, military exercises&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Cough/Congestion</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Sore Throat</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 1.266%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">-0.84</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ffd32a;font-size:.72rem">Coccidioidomycosis 🌵</span></td>
+    </tr><tr onclick="showDDX({&quot;sym_a&quot;:&quot;sore_throat&quot;,&quot;sym_b&quot;:&quot;fever&quot;,&quot;label_a&quot;:&quot;Sore Throat&quot;,&quot;label_b&quot;:&quot;Fever&quot;,&quot;rec_rate&quot;:0.2849,&quot;baseline_mean&quot;:0.7679,&quot;baseline_sd&quot;:0.5619,&quot;z_score&quot;:-0.86,&quot;n_joint&quot;:1,&quot;n_postals&quot;:1,&quot;has_hc&quot;:false,&quot;flag_z&quot;:false,&quot;flag_hc&quot;:false,&quot;flag_cluster&quot;:true,&quot;n_flags&quot;:1,&quot;flagged&quot;:true,&quot;ddx_summary&quot;:[{&quot;syndrome&quot;:&quot;Rocky Mountain Spotted Fever (RMSF)&quot;,&quot;concern&quot;:&quot;CRITICAL&quot;,&quot;pathogen&quot;:&quot;Rickettsia rickettsii (tick-borne)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Paired serology (IgG/IgM): 4-fold rise — Indirect Fluorescent Antibody (IFA)&quot;,&quot;epi0&quot;:&quot;Tick exposure history within 14 days (American dog tick, Rocky Mountain wood tick)&quot;},{&quot;syndrome&quot;:&quot;Hantavirus Pulmonary Syndrome (HPS)&quot;,&quot;concern&quot;:&quot;CRITICAL&quot;,&quot;pathogen&quot;:&quot;Sin Nombre hantavirus (rodent-borne aerosol)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;Hantavirus IgM/IgG serology (CDC Hantavirus panel) — ELISA&quot;,&quot;epi0&quot;:&quot;Rodent exposure history: cleaning outbuildings, rural/agricultural settings&quot;},{&quot;syndrome&quot;:&quot;Meningococcemia / Bacterial Meningitis&quot;,&quot;concern&quot;:&quot;CRITICAL&quot;,&quot;pathogen&quot;:&quot;Neisseria meningitidis&quot;,&quot;az_endemic&quot;:false,&quot;lab0&quot;:&quot;Blood culture × 2 (before antibiotics) — Neisseria meningitidis&quot;,&quot;epi0&quot;:&quot;Close contacts within 7 days (household, dormitory, kissing contacts)&quot;},{&quot;syndrome&quot;:&quot;West Nile Virus (Neuroinvasive or Fever)&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;West Nile virus (Culex mosquito-borne)&quot;,&quot;az_endemic&quot;:true,&quot;lab0&quot;:&quot;WNV IgM antibody in serum or CSF — plaque-reduction neutralization (PRNT)&quot;,&quot;epi0&quot;:&quot;Mosquito exposure history (unprotected outdoor activity, no repellent)&quot;},{&quot;syndrome&quot;:&quot;Dengue Fever / Hemorrhagic Dengue&quot;,&quot;concern&quot;:&quot;HIGH&quot;,&quot;pathogen&quot;:&quot;Dengue virus 1–4 (Aedes mosquito-borne, travel-associated)&quot;,&quot;az_endemic&quot;:false,&quot;lab0&quot;:&quot;Dengue NS1 antigen EIA (days 1–5 of fever)&quot;,&quot;epi0&quot;:&quot;Travel history to Mexico, Central/South America, Caribbean, Southeast Asia within 14 days&quot;}]});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">Sore Throat</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">Fever</strong></td>
+      <td>0.285%<br><span style="color:var(--muted);font-size:.72rem">base: 0.768%</span></td>
+      <td style="color:#e8eaf6;font-weight:700">-0.86</td>
+      <td>1</td>
+      <td>1</td>
+      <td><span class="flag-c">CLUSTER(1)</span></td>
+      <td class="ddx-list"><span style="color:#ff4757;font-size:.72rem">Rocky Mountain Spotted Fever 🌵</span><br><span style="color:#ff4757;font-size:.72rem">Hantavirus Pulmonary Syndrome 🌵</span><br><span style="color:#ff4757;font-size:.72rem">Meningococcemia / Bacterial Meningitis</span></td>
+    </tr></tbody></table><p style="color:var(--muted);font-size:.75rem;margin-top:8px">Click any row to view full differential diagnosis in Panel D.</p></div>
+  </div>
+
+  <!-- Panel F: Narrative -->
+  <div class="panel panel-full">
+    <h2>Panel F — Rare Event Surveillance Narrative (LLM-generated)</h2>
+    <div class="narrative-box">RARE EVENT CO-OCCURRENCE SIGNAL REPORT<br>Region: Arizona | Reference: 2026-05-21 | Window: 7d recent / 90d baseline<br>Classification: ADHS INTERNAL — SENSITIVE SURVEILLANCE DATA<br><br>——— EXECUTIVE SUMMARY ———<br><br>Systematic evaluation of all 91 unique 2-symptom pairs across 14 EpiHack<br>symptom dimensions for the 7-day window ending 2026-05-21:<br><br>  • Pairs with z-score &gt;2 SD above 90-day baseline: 0<br>  • Pairs involving high-concern symptoms:           1<br>  • Pairs clustering in ≤2 postal codes:            12<br>  • Pairs meeting ≥2 criteria (ESCALATED):          1<br><br>——— FLAGGED PAIRS — DETAILED ANALYSIS ———<br><br>[1] Nausea/Vomiting + Discolored/Bloody Urine<br>    Severity: ESCALATED | Criteria: HIGH-CONCERN SYMPTOM | GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.113% ± 0.199%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Immediate ADHS notification; activate rare disease investigation protocol.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC) (HIGH)<br>         Pathogen: E. coli O157:H7 or other STEC<br>         Key lab: Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)<br>      2. Leptospirosis (Weil's Disease — severe form) (HIGH) [AZ ENDEMIC]<br>         Pathogen: Leptospira interrogans (water/soil contact, zoonotic)<br>         Key lab: Microscopic Agglutination Test (MAT) — gold standard serology, paired sera<br>      3. Rhabdomyolysis (Exertional or Toxic) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Non-infectious: exertional, drug/toxin, heat stroke<br>         Key lab: Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis<br><br>[2] Muscle Aches + Red Eyes<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.115% ± 0.154%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Rhabdomyolysis (Exertional or Toxic) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Non-infectious: exertional, drug/toxin, heat stroke<br>         Key lab: Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis<br><br>[3] Cough/Congestion + Diarrhea<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.131% ± 0.178%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC) (HIGH)<br>         Pathogen: E. coli O157:H7 or other STEC<br>         Key lab: Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)<br>      2. Coccidioidomycosis (Valley Fever) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Coccidioides immitis/posadasii (soil-borne fungal)<br>         Key lab: Coccidioides serology: IgM (EIA or IDTP) — acute infection<br><br>[4] Diarrhea + Muscle Aches<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.153% ± 0.197%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC) (HIGH)<br>         Pathogen: E. coli O157:H7 or other STEC<br>         Key lab: Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)<br>      2. Rhabdomyolysis (Exertional or Toxic) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Non-infectious: exertional, drug/toxin, heat stroke<br>         Key lab: Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis<br><br>[5] Sore Throat + Diarrhea<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.158% ± 0.243%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC) (HIGH)<br>         Pathogen: E. coli O157:H7 or other STEC<br>         Key lab: Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)<br><br>[6] Sore Throat + Diff. Breathing<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.186% ± 0.254%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Hantavirus Pulmonary Syndrome (HPS) (CRITICAL) [AZ ENDEMIC]<br>         Pathogen: Sin Nombre hantavirus (rodent-borne aerosol)<br>         Key lab: Hantavirus IgM/IgG serology (CDC Hantavirus panel) — ELISA<br><br>[7] Cough/Congestion + Muscle Aches<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=2 postals)<br>    Joint prevalence: 0.570% (baseline: 0.615% ± 0.437%)<br>    Co-reporters: n=2 across 2 postal code(s)<br>    Interpretation: BORDERLINE — meets one criterion; interpret with caution pending additional data.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Coccidioidomycosis (Valley Fever) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Coccidioides immitis/posadasii (soil-borne fungal)<br>         Key lab: Coccidioides serology: IgM (EIA or IDTP) — acute infection<br>      2. Rhabdomyolysis (Exertional or Toxic) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Non-infectious: exertional, drug/toxin, heat stroke<br>         Key lab: Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis<br><br>[8] Sore Throat + Muscle Aches<br>    Severity: MONITOR | Criteria: GEOGRAPHIC CLUSTER (n=1 postals)<br>    Joint prevalence: 0.285% (baseline: 0.401% ± 0.449%)<br>    Co-reporters: n=1 across 1 postal code(s)<br>    Interpretation: POSSIBLE ARTIFACT — single co-reporter; rates may be inflated by coincidental reporting.<br>    Action: Continue enhanced surveillance; collect additional data over next 7 days.<br><br>    DIFFERENTIAL DIAGNOSES (top 5, Arizona-prioritised):<br>      1. Rhabdomyolysis (Exertional or Toxic) (MODERATE) [AZ ENDEMIC]<br>         Pathogen: Non-infectious: exertional, drug/toxin, heat stroke<br>         Key lab: Serum CK (creatine kinase): &gt;5× ULN (~1,000 U/L) confirms rhabdomyolysis<br><br>——— HIGH-CONCERN SYMPTOM SURVEILLANCE STATUS ———<br><br>High-concern symptoms (Bleeding from Body Openings, Yellow Skin/Eyes, Discolored/Bloody Urine)<br>are monitored regardless of statistical threshold, as even isolated reports may represent:<br>  • Hemorrhagic fever (RMSF, Hantavirus, Dengue) — immediately notifiable<br>  • Severe hepatic disease (acute viral hepatitis, Weil's disease)<br>  • Renal emergency (HUS, Hantavirus HFRS, rhabdomyolysis)<br><br>Any report of high-concern symptom co-occurrence with any other symptom should trigger:<br>  1. Clinical alert to reporting postal code's primary care network<br>  2. Cross-validation with ED syndromic and wastewater data (see US#9)<br>  3. One Health risk assessment (see US#7)<br>  4. ADHS Epidemiology duty officer notification within 24 hours<br><br>——— METHODOLOGICAL NOTE ———<br><br>The 90-day baseline is divided into 12 non-overlapping 7-day blocks; mean and SD of<br>joint prevalence are computed across blocks. This block-bootstrap approach ensures<br>variance estimation reflects genuine week-to-week fluctuation rather than<br>aggregation-window artefacts. Geographic clustering (≤2 postal codes) serves as an<br>independent signal of point-source exposure, orthogonal to the statistical threshold.<br><br>[NOTE: EpiHack participatory data reflects self-reported symptoms. Co-occurrence of<br>two rare symptoms in a small reporter pool may represent coincidental co-reporting.<br>Statistical significance alone does not constitute a public health emergency — always<br>interpret in clinical and epidemiological context.]<br></div>
+  </div>
+
+  <!-- Panel G: LLM Prompt -->
+  <div class="panel panel-full">
+    <h2>Panel G — LLM Prompt Template (filled)</h2>
+    <div class="prompt-box">You are an epidemiological signal analyst specializing in rare event detection. Review the following co-occurrence matrix of symptoms reported in the past 7 days:<br><br>Symptom A                    Symptom B                     Joint Rate%  Z-score  N Postals<br>------------------------------------------------------------------------------------------<br>Nausea/Vomiting              Discolored/Bloody Urine      0.285%          0.87          1<br>Muscle Aches                 Red Eyes                     0.285%          1.11          1<br>Cough/Congestion             Diarrhea                     0.285%          0.86          1<br>Diarrhea                     Muscle Aches                 0.285%          0.67          1<br>Sore Throat                  Diarrhea                     0.285%          0.52          1<br>Sore Throat                  Diff. Breathing              0.285%          0.39          1<br>Cough/Congestion             Muscle Aches                 0.570%         -0.10          2<br>Sore Throat                  Muscle Aches                 0.285%         -0.26          1<br>Muscle Aches                 Chills                       0.285%         -0.61          1<br>Cough/Congestion             Chills                       0.285%         -0.81          1<br><br>Reference date: 2026-05-21 | Window: 7 days<br>Total pairs evaluated: 91 | Flagging criteria:<br>  (1) Z-score &gt;2.0: 0 pairs<br>  (2) High-concern symptom involvement: 1 pairs<br>  (3) Geographic clustering ≤2 postal codes: 12 pairs<br><br>Flag any symptom combinations that:<br>(1) have a prevalence rate &gt;2 standard deviations above the 90-day historical mean;<br>(2) include high-concern symptoms (Bleeding from Body Openings, Yellow Skin/Eyes, Discolored/Bloody Urine);<br>(3) cluster in fewer than 3 postal codes.<br><br>For each flagged combination:<br>(a) Generate a differential diagnosis list (top 5 candidate syndromes, Arizona-endemic prioritised).<br>(b) Recommend confirmatory laboratory investigations.<br>(c) Recommend confirmatory epidemiological investigations.<br>(d) Assess whether the pattern is consistent with a true rare event or a reporting artifact.<br><br>Structure output as: FLAGGED PAIR | CRITERIA MET | DIFFERENTIAL DIAGNOSES | LAB INVESTIGATIONS | EPI INVESTIGATIONS | ASSESSMENT<br></div>
+  </div>
+
+</div>
+<footer>
+  EpiHack Participatory Epidemiological Surveillance Platform &nbsp;|&nbsp;
+  Arizona ADHS · User Story #11 — Rare Event Co-Occurrence Analysis &nbsp;|&nbsp; 2026-05-21
+</footer>
+
+<script>
+const JOINT_MAT  = [[0.0, 0.2849002849002849, 0.0, 0.0, 0.2849002849002849, 0.5698005698005698, 0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.2849002849002849, 0.0, 0.2849002849002849, 0.0, 0.2849002849002849, 0.2849002849002849, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.2849002849002849], [0.2849002849002849, 0.2849002849002849, 0.0, 0.0, 0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.5698005698005698, 0.2849002849002849, 0.0, 0.0, 0.2849002849002849, 0.0, 0.0, 0.2849002849002849, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 0.0, 0.2849002849002849, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]];
+const Z_MAT      = [[0.0, -0.8414332276036528, -0.8589241866252078, -0.7977205532718029, 0.8639549264787808, -0.10433106608515864, -1.4118120699432808, -0.8097418846397092, -0.5159566614718142, -0.8272631975308739, -0.6409812517351676, -0.4108499168749792, 0.0, -0.3967692812347705], [-0.8414332276036528, 0.0, 0.3909463446974703, -1.0444646034321758, 0.5202930927251743, -0.25791352967946085, -0.8595726546286138, -1.451601193180051, -0.7556777446977931, -0.8695284279437739, -0.40244364455383796, -0.5336252627163015, 0.0, -0.7574534093195736], [-0.8589241866252078, 0.3909463446974703, 0.0, -0.5127686367370067, -0.5510679581628203, -1.0428637076478504, -1.1578149155730042, -1.134305968828945, 0.0, -0.5248714314266492, 0.0, -0.2886751345948128, 0.0, -0.288675134594813], [-0.7977205532718029, -1.0444646034321758, -0.5127686367370067, 0.0, -0.6146653159506391, -0.7330387710654259, -1.4194449090199868, -0.5230364583031809, -0.5159566614718142, -0.6639997257233936, 0.0, -0.4108499168749792, 0.0, 0.8665434342443814], [0.8639549264787808, 0.5202930927251743, -0.5510679581628203, -0.6146653159506391, 0.0, 0.6699725377202435, -1.0128416247141798, -0.5338814511633018, -0.5159566614718142, -0.7794099744507968, 0.0, -0.4108499168749792, 0.0, -0.5785191085523835], [-0.10433106608515864, -0.25791352967946085, -1.0428637076478504, -0.7330387710654259, 0.6699725377202435, 0.0, -1.2208406544659738, -0.6092744171280873, 1.1053415205530621, -0.9234647933318693, -0.42817345814271285, -0.4108499168749792, 0.0, -0.6373741959873876], [-1.4118120699432808, -0.8595726546286138, -1.1578149155730042, -1.4194449090199868, -1.0128416247141798, -1.2208406544659738, 0.0, -1.7845317064930397, -0.6392551396287747, -0.7708259893596632, -0.28867513459481287, -0.28867513459481287, 0.0, -0.7710519258507873], [-0.8097418846397092, -1.451601193180051, -1.134305968828945, -0.5230364583031809, -0.5338814511633018, -0.6092744171280873, -1.7845317064930397, 0.0, -0.4240356881207863, -0.6416700288627316, -0.2886751345948129, 0.0, 0.0, -0.5006412170179438], [-0.5159566614718142, -0.7556777446977931, 0.0, -0.5159566614718142, -0.5159566614718142, 1.1053415205530621, -0.6392551396287747, -0.4240356881207863, 0.0, -0.629531979640318, -0.40515215216497036, -0.4108499168749792, 0.0, -0.5285446136010274], [-0.8272631975308739, -0.8695284279437739, -0.5248714314266492, -0.6639997257233936, -0.7794099744507968, -0.9234647933318693, -0.7708259893596632, -0.6416700288627316, -0.629531979640318, 0.0, -0.3987180695961175, -0.5361107505267428, 0.0, -0.3967692812347705], [-0.6409812517351676, -0.40244364455383796, 0.0, 0.0, 0.0, -0.42817345814271285, -0.28867513459481287, -0.2886751345948129, -0.40515215216497036, -0.3987180695961175, 0.0, 0.0, 0.0, -0.28867513459481287], [-0.4108499168749792, -0.5336252627163015, -0.2886751345948128, -0.4108499168749792, -0.4108499168749792, -0.4108499168749792, -0.28867513459481287, 0.0, -0.4108499168749792, -0.5361107505267428, 0.0, 0.0, 0.0, -0.28867513459481287], [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], [-0.3967692812347705, -0.7574534093195736, -0.288675134594813, 0.8665434342443814, -0.5785191085523835, -0.6373741959873876, -0.7710519258507873, -0.5006412170179438, -0.5285446136010274, -0.3967692812347705, -0.28867513459481287, -0.28867513459481287, 0.0, 0.0]];
+const FLAGGED    = [{"sym_a": "nauseas_vomiting", "sym_b": "discolored_or_bloody_urine", "label_a": "Nausea/Vomiting", "label_b": "Discolored/Bloody Urine", "rec_rate": 0.2849, "baseline_mean": 0.1125, "baseline_sd": 0.1989, "z_score": 0.87, "n_joint": 1, "n_postals": 1, "has_hc": true, "flag_z": false, "flag_hc": true, "flag_cluster": true, "n_flags": 2, "flagged": true, "ddx_summary": [{"syndrome": "Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)", "concern": "HIGH", "pathogen": "E. coli O157:H7 or other STEC", "az_endemic": false, "lab0": "Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)", "epi0": "Food exposure history: ground beef, leafy greens, unpasteurized products"}, {"syndrome": "Leptospirosis (Weil's Disease \u2014 severe form)", "concern": "HIGH", "pathogen": "Leptospira interrogans (water/soil contact, zoonotic)", "az_endemic": true, "lab0": "Microscopic Agglutination Test (MAT) \u2014 gold standard serology, paired sera", "epi0": "Flood/irrigation water exposure in 2\u201330 days prior to onset"}, {"syndrome": "Rhabdomyolysis (Exertional or Toxic)", "concern": "MODERATE", "pathogen": "Non-infectious: exertional, drug/toxin, heat stroke", "az_endemic": true, "lab0": "Serum CK (creatine kinase): >5\u00d7 ULN (~1,000 U/L) confirms rhabdomyolysis", "epi0": "Strenuous physical exertion in high-heat environment (NWS HeatRisk \u22653)"}]}, {"sym_a": "muscle_or_body_aches_and_pains", "sym_b": "red_eyes", "label_a": "Muscle Aches", "label_b": "Red Eyes", "rec_rate": 0.2849, "baseline_mean": 0.1145, "baseline_sd": 0.1541, "z_score": 1.11, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Rhabdomyolysis (Exertional or Toxic)", "concern": "MODERATE", "pathogen": "Non-infectious: exertional, drug/toxin, heat stroke", "az_endemic": true, "lab0": "Serum CK (creatine kinase): >5\u00d7 ULN (~1,000 U/L) confirms rhabdomyolysis", "epi0": "Strenuous physical exertion in high-heat environment (NWS HeatRisk \u22653)"}]}, {"sym_a": "cough_congestion", "sym_b": "diarrhea", "label_a": "Cough/Congestion", "label_b": "Diarrhea", "rec_rate": 0.2849, "baseline_mean": 0.1307, "baseline_sd": 0.1785, "z_score": 0.86, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)", "concern": "HIGH", "pathogen": "E. coli O157:H7 or other STEC", "az_endemic": false, "lab0": "Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)", "epi0": "Food exposure history: ground beef, leafy greens, unpasteurized products"}, {"syndrome": "Coccidioidomycosis (Valley Fever)", "concern": "MODERATE", "pathogen": "Coccidioides immitis/posadasii (soil-borne fungal)", "az_endemic": true, "lab0": "Coccidioides serology: IgM (EIA or IDTP) \u2014 acute infection", "epi0": "Soil disturbance activities: construction, farming, archaeology, military exercises"}]}, {"sym_a": "diarrhea", "sym_b": "muscle_or_body_aches_and_pains", "label_a": "Diarrhea", "label_b": "Muscle Aches", "rec_rate": 0.2849, "baseline_mean": 0.1532, "baseline_sd": 0.1966, "z_score": 0.67, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)", "concern": "HIGH", "pathogen": "E. coli O157:H7 or other STEC", "az_endemic": false, "lab0": "Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)", "epi0": "Food exposure history: ground beef, leafy greens, unpasteurized products"}, {"syndrome": "Rhabdomyolysis (Exertional or Toxic)", "concern": "MODERATE", "pathogen": "Non-infectious: exertional, drug/toxin, heat stroke", "az_endemic": true, "lab0": "Serum CK (creatine kinase): >5\u00d7 ULN (~1,000 U/L) confirms rhabdomyolysis", "epi0": "Strenuous physical exertion in high-heat environment (NWS HeatRisk \u22653)"}]}, {"sym_a": "sore_throat", "sym_b": "diarrhea", "label_a": "Sore Throat", "label_b": "Diarrhea", "rec_rate": 0.2849, "baseline_mean": 0.1584, "baseline_sd": 0.2432, "z_score": 0.52, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Hemolytic Uremic Syndrome (HUS) / Shiga-toxin E. coli (STEC)", "concern": "HIGH", "pathogen": "E. coli O157:H7 or other STEC", "az_endemic": false, "lab0": "Stool culture for STEC O157:H7 and non-O157 STEC (within 7 days of onset)", "epi0": "Food exposure history: ground beef, leafy greens, unpasteurized products"}]}, {"sym_a": "sore_throat", "sym_b": "difficulty_breathing", "label_a": "Sore Throat", "label_b": "Diff. Breathing", "rec_rate": 0.2849, "baseline_mean": 0.1856, "baseline_sd": 0.2539, "z_score": 0.39, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Hantavirus Pulmonary Syndrome (HPS)", "concern": "CRITICAL", "pathogen": "Sin Nombre hantavirus (rodent-borne aerosol)", "az_endemic": true, "lab0": "Hantavirus IgM/IgG serology (CDC Hantavirus panel) \u2014 ELISA", "epi0": "Rodent exposure history: cleaning outbuildings, rural/agricultural settings"}]}, {"sym_a": "cough_congestion", "sym_b": "muscle_or_body_aches_and_pains", "label_a": "Cough/Congestion", "label_b": "Muscle Aches", "rec_rate": 0.5698, "baseline_mean": 0.6154, "baseline_sd": 0.4372, "z_score": -0.1, "n_joint": 2, "n_postals": 2, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Coccidioidomycosis (Valley Fever)", "concern": "MODERATE", "pathogen": "Coccidioides immitis/posadasii (soil-borne fungal)", "az_endemic": true, "lab0": "Coccidioides serology: IgM (EIA or IDTP) \u2014 acute infection", "epi0": "Soil disturbance activities: construction, farming, archaeology, military exercises"}, {"syndrome": "Rhabdomyolysis (Exertional or Toxic)", "concern": "MODERATE", "pathogen": "Non-infectious: exertional, drug/toxin, heat stroke", "az_endemic": true, "lab0": "Serum CK (creatine kinase): >5\u00d7 ULN (~1,000 U/L) confirms rhabdomyolysis", "epi0": "Strenuous physical exertion in high-heat environment (NWS HeatRisk \u22653)"}]}, {"sym_a": "sore_throat", "sym_b": "muscle_or_body_aches_and_pains", "label_a": "Sore Throat", "label_b": "Muscle Aches", "rec_rate": 0.2849, "baseline_mean": 0.4006, "baseline_sd": 0.4486, "z_score": -0.26, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Rhabdomyolysis (Exertional or Toxic)", "concern": "MODERATE", "pathogen": "Non-infectious: exertional, drug/toxin, heat stroke", "az_endemic": true, "lab0": "Serum CK (creatine kinase): >5\u00d7 ULN (~1,000 U/L) confirms rhabdomyolysis", "epi0": "Strenuous physical exertion in high-heat environment (NWS HeatRisk \u22653)"}]}, {"sym_a": "muscle_or_body_aches_and_pains", "sym_b": "chills", "label_a": "Muscle Aches", "label_b": "Chills", "rec_rate": 0.2849, "baseline_mean": 0.4953, "baseline_sd": 0.3453, "z_score": -0.61, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Rhabdomyolysis (Exertional or Toxic)", "concern": "MODERATE", "pathogen": "Non-infectious: exertional, drug/toxin, heat stroke", "az_endemic": true, "lab0": "Serum CK (creatine kinase): >5\u00d7 ULN (~1,000 U/L) confirms rhabdomyolysis", "epi0": "Strenuous physical exertion in high-heat environment (NWS HeatRisk \u22653)"}]}, {"sym_a": "cough_congestion", "sym_b": "chills", "label_a": "Cough/Congestion", "label_b": "Chills", "rec_rate": 0.2849, "baseline_mean": 0.7107, "baseline_sd": 0.5258, "z_score": -0.81, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Coccidioidomycosis (Valley Fever)", "concern": "MODERATE", "pathogen": "Coccidioides immitis/posadasii (soil-borne fungal)", "az_endemic": true, "lab0": "Coccidioides serology: IgM (EIA or IDTP) \u2014 acute infection", "epi0": "Soil disturbance activities: construction, farming, archaeology, military exercises"}]}, {"sym_a": "cough_congestion", "sym_b": "sore_throat", "label_a": "Cough/Congestion", "label_b": "Sore Throat", "rec_rate": 0.2849, "baseline_mean": 1.2665, "baseline_sd": 1.1666, "z_score": -0.84, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Coccidioidomycosis (Valley Fever)", "concern": "MODERATE", "pathogen": "Coccidioides immitis/posadasii (soil-borne fungal)", "az_endemic": true, "lab0": "Coccidioides serology: IgM (EIA or IDTP) \u2014 acute infection", "epi0": "Soil disturbance activities: construction, farming, archaeology, military exercises"}]}, {"sym_a": "sore_throat", "sym_b": "fever", "label_a": "Sore Throat", "label_b": "Fever", "rec_rate": 0.2849, "baseline_mean": 0.7679, "baseline_sd": 0.5619, "z_score": -0.86, "n_joint": 1, "n_postals": 1, "has_hc": false, "flag_z": false, "flag_hc": false, "flag_cluster": true, "n_flags": 1, "flagged": true, "ddx_summary": [{"syndrome": "Rocky Mountain Spotted Fever (RMSF)", "concern": "CRITICAL", "pathogen": "Rickettsia rickettsii (tick-borne)", "az_endemic": true, "lab0": "Paired serology (IgG/IgM): 4-fold rise \u2014 Indirect Fluorescent Antibody (IFA)", "epi0": "Tick exposure history within 14 days (American dog tick, Rocky Mountain wood tick)"}, {"syndrome": "Hantavirus Pulmonary Syndrome (HPS)", "concern": "CRITICAL", "pathogen": "Sin Nombre hantavirus (rodent-borne aerosol)", "az_endemic": true, "lab0": "Hantavirus IgM/IgG serology (CDC Hantavirus panel) \u2014 ELISA", "epi0": "Rodent exposure history: cleaning outbuildings, rural/agricultural settings"}, {"syndrome": "Meningococcemia / Bacterial Meningitis", "concern": "CRITICAL", "pathogen": "Neisseria meningitidis", "az_endemic": false, "lab0": "Blood culture \u00d7 2 (before antibiotics) \u2014 Neisseria meningitidis", "epi0": "Close contacts within 7 days (household, dormitory, kissing contacts)"}, {"syndrome": "West Nile Virus (Neuroinvasive or Fever)", "concern": "HIGH", "pathogen": "West Nile virus (Culex mosquito-borne)", "az_endemic": true, "lab0": "WNV IgM antibody in serum or CSF \u2014 plaque-reduction neutralization (PRNT)", "epi0": "Mosquito exposure history (unprotected outdoor activity, no repellent)"}, {"syndrome": "Dengue Fever / Hemorrhagic Dengue", "concern": "HIGH", "pathogen": "Dengue virus 1\u20134 (Aedes mosquito-borne, travel-associated)", "az_endemic": false, "lab0": "Dengue NS1 antigen EIA (days 1\u20135 of fever)", "epi0": "Travel history to Mexico, Central/South America, Caribbean, Southeast Asia within 14 days"}]}];
+const SYM_SHORT  = ["Cough/Congestion", "Sore Throat", "Diff. Breathing", "Nausea/Vomiting", "Diarrhea", "Muscle Aches", "Fever", "Chills", "Red Eyes", "Rash", "Loss Smell/Taste", "Bleeding (Openings)", "Yellow Skin/Eyes", "Discolored/Bloody Urine"];
+const HC_INDICES = [11, 12, 13];
+const N_SYM = 14;
+const BG="#0f1117",SURFACE="#1a1d27",ACCENT="#6c63ff",RED="#ff4757",
+      ORANGE="#ffa502",GREEN="#43e97b",YELLOW="#ffd32a",BLUE="#1e90ff",
+      CYAN="#00d2d3",TEXT="#e8eaf6",MUTED="#8892a4";
+
+// ── Build flagged lookup for quick z-star overlay ─────────────────────────
+const flaggedPairs = new Set(FLAGGED.map(r => `${r.sym_a}||${r.sym_b}`));
+
+// ── Heatmap rendering ─────────────────────────────────────────────────────
+function renderHeatmap() {
+  const mode = document.getElementById("hmMode").value;
+  const mat  = mode === "joint" ? JOINT_MAT : Z_MAT;
+  document.getElementById("hmTitle").textContent = mode === "joint"
+    ? "Panel A — Joint Prevalence Co-Occurrence Heatmap (%)"
+    : "Panel B — Z-Score Heatmap (SD above 90-day baseline)";
+
+  // Compute colour scale
+  const vals = mat.flat().filter(v => v !== null && v !== 0);
+  if (!vals.length) return;
+  const vmax = mode === "joint" ? Math.max(...vals) : Math.max(Math.abs(Math.min(...vals)), Math.max(...vals));
+  const vmin = mode === "joint" ? 0 : -vmax;
+
+  function cellColor(v) {
+    if (v === null) return BG;
+    const t = Math.max(0, Math.min(1, (v - vmin) / (vmax - vmin)));
+    if (mode === "joint") {
+      const r = Math.round(255 * t);
+      const g = Math.round(255 * (1 - t) * 0.6);
+      return `rgb(${r},${g},0)`;
+    } else {
+      if (t > 0.5) {
+        const i = (t - 0.5) * 2;
+        return `rgb(${Math.round(255*i)},0,0)`;
+      } else {
+        const i = (0.5 - t) * 2;
+        return `rgb(0,${Math.round(100*i)},${Math.round(255*i)})`;
+      }
+    }
+  }
+
+  const container = document.getElementById("heatmapContainer");
+  // Header row
+  let html = `<table class="hm-table"><tr><td style="width:80px"></td>`;
+  SYM_SHORT.forEach((s,j) => {
+    const hcStyle = HC_INDICES.includes(j) ? "color:var(--red);font-weight:700" : "color:var(--muted)";
+    html += `<th style="writing-mode:vertical-rl;transform:rotate(180deg);padding:2px 0;font-size:.6rem;${hcStyle}">${s}</th>`;
+  });
+  html += `</tr>`;
+
+  for (let i = 0; i < N_SYM; i++) {
+    const rowHcStyle = HC_INDICES.includes(i) ? "color:var(--red);font-weight:700" : "";
+    html += `<tr><td style="font-size:.65rem;white-space:nowrap;padding-right:6px;${rowHcStyle}">${SYM_SHORT[i]}</td>`;
+    for (let j = 0; j < N_SYM; j++) {
+      if (i === j) {
+        html += `<td class="hm-cell" style="background:#2a2d3e"></td>`;
+        continue;
+      }
+      const v   = mat[i][j];
+      const bg  = cellColor(v);
+      const isPair = flaggedPairs.has(`${FLAGGED.map(r=>r.sym_a)[0]||""}||${FLAGGED.map(r=>r.sym_b)[0]||""}`)
+                    ? "" : "";  // placeholder
+      const star = FLAGGED.some(r =>
+        (r.sym_a_idx === i && r.sym_b_idx === j) ||
+        (r.sym_a_idx === j && r.sym_b_idx === i)) ? "★" : "";
+      const hcBorder = (HC_INDICES.includes(i) || HC_INDICES.includes(j))
+        ? "border:1px solid rgba(255,71,87,0.5)" : "";
+      const dispV = mode === "joint"
+        ? (v !== null ? v.toFixed(2) : "")
+        : (v !== null ? v.toFixed(1) : "");
+      const tip = `${SYM_SHORT[i]} + ${SYM_SHORT[j]}: ${dispV}${mode==="joint"?"%":" SD"}`;
+      html += `<td class="hm-cell" style="background:${bg};${hcBorder}" title="${tip}">${star}</td>`;
+    }
+    html += `</tr>`;
+  }
+  html += `</table>`;
+  container.innerHTML = html;
+}
+renderHeatmap();
+
+// ── Panel C: Z-score bar chart ─────────────────────────────────────────────
+(function() {
+  const ctx = document.getElementById("zChart").getContext("2d");
+  if (!FLAGGED.length) {
+    ctx.canvas.parentElement.innerHTML = "<p style='color:var(--muted);padding:40px;text-align:center'>No flagged pairs in current window.</p>";
+    return;
+  }
+  const sorted = [...FLAGGED].sort((a,b) => (b.z_score??0)-(a.z_score??0)).slice(0,12);
+  const lbls   = sorted.map(r => `${r.label_a?.slice(0,12)}\n+${r.label_b?.slice(0,12)}`);
+  const zs     = sorted.map(r => r.z_score ?? 0);
+  const clrs   = zs.map(z => z > 3 ? RED+"cc" : z > 2 ? ORANGE+"cc" : BLUE+"cc");
+  new Chart(ctx, {
+    type:"bar",
+    data:{
+      labels: lbls,
+      datasets:[{label:"Z-Score",data:zs,backgroundColor:clrs,borderColor:clrs.map(c=>c.slice(0,-2)),borderWidth:1}]
+    },
+    options:{
+      indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      onClick:(e,el) => {
+        if (el.length) showDDX(sorted[el[0].index]);
+      },
+      plugins:{
+        legend:{display:false},
+        annotation:{annotations:{
+          z2:{type:"line",xMin:2,xMax:2,borderColor:ORANGE,borderWidth:1.5,borderDash:[4,3]},
+          z3:{type:"line",xMin:3,xMax:3,borderColor:RED,borderWidth:1.5,borderDash:[4,3]},
+        }},
+        tooltip:{callbacks:{label:c=>` Z=${c.raw?.toFixed(2)} | click to view DDx`}}
+      },
+      scales:{
+        x:{ticks:{color:TEXT},grid:{color:"#2a2d3e"},title:{display:true,text:"Z-Score",color:MUTED}},
+        y:{ticks:{color:TEXT,font:{size:8}},grid:{color:"#2a2d3e"}}
+      }
+    }
+  });
+})();
+
+// ── DDx Explorer ──────────────────────────────────────────────────────────
+function showDDX(row) {
+  const container = document.getElementById("ddxExplorer");
+  if (!row || !row.ddx_summary?.length) {
+    container.innerHTML = "<p style='color:var(--muted)'>No DDx available for this pair.</p>";
+    return;
+  }
+  const conclr = {"CRITICAL":RED,"HIGH":ORANGE,"MODERATE":YELLOW,"LOW":GREEN};
+  let html = `<div style="margin-bottom:10px">
+    <strong style="color:var(--yellow)">${row.label_a} + ${row.label_b}</strong>
+    <span style="color:var(--muted);font-size:.75rem;margin-left:10px">
+      Z=${row.z_score?.toFixed(2)} | Rate=${row.rec_rate?.toFixed(3)}% | n=${row.n_joint} | ${row.n_postals} postal(s)
+    </span>
+  </div>`;
+  row.ddx_summary.forEach((d,i) => {
+    const c = conclr[d.concern] || TEXT;
+    const az = d.az_endemic ? "🌵 AZ Endemic" : "";
+    html += `<div style="margin:8px 0;padding:10px;background:var(--bg);border-radius:6px;border-left:3px solid ${c}">
+      <strong style="color:${c}">${i+1}. ${d.syndrome}</strong>
+      <span class="badge ${d.concern==="CRITICAL"?"crit":d.concern==="HIGH"?"high":"mod"}" style="margin-left:8px">${d.concern}</span>
+      ${az ? `<span style="color:var(--green);font-size:.73rem;margin-left:6px">${az}</span>` : ""}
+      <div style="color:var(--muted);font-size:.75rem;margin-top:4px">Pathogen: ${d.pathogen}</div>
+      <div style="font-size:.75rem;margin-top:3px">🔬 Lab: ${d.lab0}</div>
+      <div style="font-size:.75rem;color:var(--cyan);margin-top:2px">🔍 Epi: ${d.epi0}</div>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ── Panel E: Decision Table ────────────────────────────────────────────────
+function renderTable() {
+  const zT  = parseFloat(document.getElementById("zThresh").value);
+  const hcO = document.getElementById("hcOnly").checked;
+
+  let data = FLAGGED.filter(r => {
+    if (hcO && !r.flag_hc) return false;
+    const meetZ = r.flag_z && (r.z_score ?? 0) > zT;
+    const meetH = r.flag_hc;
+    const meetC = r.flag_cluster;
+    return meetZ || meetH || meetC;
+  });
+
+  document.getElementById("flagCount").textContent = `(${data.length} pairs)`;
+  const container = document.getElementById("flagTableContainer");
+
+  if (!data.length) {
+    container.innerHTML = "<p style='color:var(--muted);padding:20px;text-align:center'>No pairs match current filters.</p>";
+    return;
+  }
+
+  const conclr = {"CRITICAL":RED,"HIGH":ORANGE,"MODERATE":YELLOW,"LOW":GREEN};
+
+  let html = `<table class="signal-table"><thead><tr>
+    <th>Pair</th><th>Joint %</th><th>Z-Score</th><th>n Cases</th>
+    <th>Postals</th><th>Flags</th><th>Top DDx (concern)</th>
+  </tr></thead><tbody>`;
+
+  data.forEach(r => {
+    const flags = [
+      r.flag_z   ? `<span class="flag-z">Z=${r.z_score?.toFixed(2)}</span>` : "",
+      r.flag_hc  ? `<span class="flag-h">HIGH-CONCERN</span>` : "",
+      r.flag_cluster ? `<span class="flag-c">CLUSTER(${r.n_postals})</span>` : "",
+    ].filter(Boolean).join(" ");
+
+    const top3ddx = (r.ddx_summary || []).slice(0,3).map(d => {
+      const c = conclr[d.concern] || TEXT;
+      const az = d.az_endemic ? " 🌵" : "";
+      return `<span style="color:${c};font-size:.72rem">${d.syndrome.split("(")[0].trim()}${az}</span>`;
+    }).join("<br>");
+
+    html += `<tr onclick="showDDX(${JSON.stringify(r).replace(/"/g,"&quot;")});" style="cursor:pointer">
+      <td><strong style="color:var(--yellow)">${r.label_a}</strong><br>
+          <span style="color:var(--muted)">+</span> <strong style="color:var(--cyan)">${r.label_b}</strong></td>
+      <td>${r.rec_rate?.toFixed(3)}%<br><span style="color:var(--muted);font-size:.72rem">base: ${r.baseline_mean?.toFixed(3)}%</span></td>
+      <td style="color:${(r.z_score??0)>3?RED:(r.z_score??0)>2?ORANGE:TEXT};font-weight:700">${r.z_score?.toFixed(2)}</td>
+      <td>${r.n_joint}</td>
+      <td>${r.n_postals}</td>
+      <td>${flags}</td>
+      <td class="ddx-list">${top3ddx}</td>
+    </tr>`;
+  });
+  html += "</tbody></table><p style='color:var(--muted);font-size:.75rem;margin-top:8px'>Click any row to view full differential diagnosis in Panel D.</p>";
+  container.innerHTML = html;
+
+  // Auto-show DDx for first row
+  if (data.length) showDDX(data[0]);
+}
+renderTable();
+</script>
+
+</body></html>
