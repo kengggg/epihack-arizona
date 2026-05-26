@@ -6,7 +6,8 @@
 
 Patipat Susumpao, Opendream Co. Ltd. <br>
 Carlos Lizárraga-Celaya, University of Arizona <br>
-May 2026.
+<br>
+[**EpiHack Arizona 2026**](https://arizona.epihack.org/)
 
 ***
 
