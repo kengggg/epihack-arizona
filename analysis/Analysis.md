@@ -4,6 +4,13 @@
 
 ***
 
+Patipat Susumpao, Opendreams Co. <br>
+Carlos Lizárraga-Celaya, University of Arizona <br>
+May 2026.
+
+***
+
+
 **All mockup dashboards created using a small data sample `epihack-mini.db`, provided by Patipat Susumpao (Keng)**
  :50,000 records, 138 postal codes, 3-year date range (2023–2026).
 
@@ -72,6 +79,6 @@ Anthropic Claude Cowork using Sonnet 4.6 was prompted with a collection of promp
 ***
 
 Created: 05/22/2026 (C. Lizárraga) <br>
-Updated: 05/24/2026 (C. Lizárraga)
+Updated: 05/26/2026 (C. Lizárraga)
 
 
